@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Check, Loader2, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Copy, Loader2, Search } from "lucide-react";
 import { PageShell } from "@/components/site/PageShell";
 import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
@@ -19,6 +19,12 @@ export const Route = createFileRoute("/track-order")({
   }),
   component: TrackOrderPage,
 });
+
+type RecentOrder = {
+  orderNumber: string;
+  phone: string;
+  createdAt: string;
+};
 
 type TrackedOrder = {
   order_number: string;
@@ -52,20 +58,47 @@ function TrackOrderPage() {
   const [order, setOrder] = useState<TrackedOrder | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [copiedOrder, setCopiedOrder] = useState("");
 
-  const track = async () => {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const rows = JSON.parse(
+        window.localStorage.getItem("zzerkoff:recent-orders:v1") || "[]",
+      ) as RecentOrder[];
+      setRecentOrders(Array.isArray(rows) ? rows.slice(0, 8) : []);
+    } catch {
+      setRecentOrders([]);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const orderParam = params.get("order") || "";
+    const phoneParam = params.get("phone") || "";
+    if (orderParam) setOrderNumber(orderParam);
+    if (phoneParam) setPhone(phoneParam);
+  }, []);
+
+  const track = async (orderOverride?: string, phoneOverride?: string) => {
     setError("");
     setOrder(null);
 
-    if (orderNumber.trim().length < 6 || phone.replace(/\D/g, "").length < 7) {
+    const nextOrderNumber = (orderOverride ?? orderNumber).trim();
+    const nextPhone = (phoneOverride ?? phone).trim();
+
+    if (orderOverride) setOrderNumber(nextOrderNumber);
+    if (phoneOverride) setPhone(nextPhone);
+
+    if (nextOrderNumber.length < 6 || nextPhone.replace(/\D/g, "").length < 7) {
       setError("Enter your order number and the same phone number used at checkout.");
       return;
     }
 
     setLoading(true);
     const { data, error: rpcError } = await (supabase as any).rpc("track_public_order", {
-      p_order_number: orderNumber.trim(),
-      p_phone: phone.trim(),
+      p_order_number: nextOrderNumber,
+      p_phone: nextPhone,
     });
     setLoading(false);
 
@@ -84,9 +117,8 @@ function TrackOrderPage() {
 
     try {
       const courier = await getPublicSteadfastStatus({
-        data: {
-          orderNumber: orderNumber.trim(),
-          phone: phone.trim(),
+        data: {          orderNumber: nextOrderNumber,
+phone: nextPhone,
         },
       });
 
@@ -134,10 +166,63 @@ function TrackOrderPage() {
           <p className="mt-6 max-w-2xl font-editorial text-lg leading-relaxed text-muted-foreground">
             Enter the order ID received after checkout and the same phone number used for the order.
           </p>
-        </Reveal>
+        </Reveal>        {recentOrders.length > 0 && (
+<Reveal delay={80}>
+  <section className="glass-panel mt-10 rounded-[28px] p-5 sm:p-7">
+    <span className="text-[8px] uppercase tracking-[0.35em] text-muted-foreground">
+      RECENT ORDERS ON THIS DEVICE
+    </span>
+    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+      Recent order IDs are saved only in this browser so you can recover and track them.
+    </p>
+
+    <div className="mt-5 space-y-2">
+      {recentOrders.map((recent) => (
+        <article
+          key={recent.orderNumber}
+          className="flex flex-wrap items-center gap-3 rounded-[20px] border border-border/50 p-4"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] uppercase tracking-[0.24em] text-foreground">
+              {recent.orderNumber}
+            </p>
+            <p className="mt-2 text-[8px] text-muted-foreground">
+              {new Date(recent.createdAt).toLocaleDateString("en-GB", {
+                dateStyle: "medium",
+              })}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(recent.orderNumber);
+                setCopiedOrder(recent.orderNumber);
+              } catch {
+                setCopiedOrder("");
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/55 px-3 py-3 text-[8px] uppercase tracking-[0.2em] text-muted-foreground"
+          >
+            <Copy className="size-3" />
+            {copiedOrder === recent.orderNumber ? "Copied" : "Copy ID"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void track(recent.orderNumber, recent.phone)}
+            className="rounded-xl border border-chrome/45 px-4 py-3 text-[8px] uppercase tracking-[0.2em] text-foreground"
+          >
+            Track
+          </button>
+        </article>
+      ))}
+    </div>
+  </section>
+</Reveal>
+        )}
 
         <Reveal delay={100}>
-          <div className="glass-panel mt-10 rounded-[28px] p-5 sm:p-8">
+<div className="glass-panel mt-10 rounded-[28px] p-5 sm:p-8">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-[8px] uppercase tracking-[0.35em] text-muted-foreground">Order ID</label>
@@ -160,9 +245,8 @@ function TrackOrderPage() {
               </div>
             </div>
             <button
-              type="button"
-              onClick={track}
-              disabled={loading}
+              type="button"              onClick={() => void track()}
+    disabled={loading}
               className="mt-5 flex w-full items-center justify-center gap-3 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-5 text-[10px] uppercase tracking-[0.42em] text-foreground transition-all hover:border-chrome hover:bg-white/[0.08] disabled:opacity-60"
             >
               {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}

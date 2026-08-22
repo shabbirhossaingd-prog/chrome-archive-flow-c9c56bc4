@@ -79,6 +79,7 @@ export function OrderModal({
   const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [orderNumber, setOrderNumber] = useState("");
   const [placedTotal, setPlacedTotal] = useState<number | null>(null);
 
@@ -96,6 +97,20 @@ export function OrderModal({
   const subtotal = unitPrice * quantity;
   const total = promo?.valid ? Number(promo.final_total) : subtotal;
 
+  const fieldClass = (key: string) =>
+    `${inputClass} ${
+      fieldErrors[key] ? "border-red-500/80 focus:border-red-500" : ""
+    }`;
+
+  const clearFieldError = (key: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (!open || typeof document === "undefined") return;
     const previous = document.body.style.overflow;
@@ -107,6 +122,13 @@ export function OrderModal({
 
   useEffect(() => {
     if (!open) return;
+
+    // A location is attached only after the customer explicitly taps
+    // "Use current location". Never reuse a saved/previous map pin.
+    setMapUrl("");
+    setLatitude(null);
+    setLongitude(null);
+    setFieldErrors({});
 
     (async () => {
       const { data: settingsData } = await (supabase as any)
@@ -140,9 +162,8 @@ export function OrderModal({
           .select("display_name,phone")
           .eq("user_id", session.user.id)
           .maybeSingle(),
-        (supabase as any)
-          .from("customer_addresses")
-          .select("recipient_name,phone,full_address,map_url")
+        (supabase as any)          .from("customer_addresses")
+.select("recipient_name,phone,full_address")
           .eq("user_id", session.user.id)
           .order("is_default", { ascending: false })
           .order("created_at", { ascending: false })
@@ -162,7 +183,6 @@ export function OrderModal({
           current || savedAddress?.phone || profile?.phone || "",
       );
       setAddress((current) => current || savedAddress?.full_address || "");
-      setMapUrl((current) => current || savedAddress?.map_url || "");
     })();
   }, [open]);
 
@@ -186,6 +206,10 @@ export function OrderModal({
     setPromoInput("");
     setCopied(false);
     setTransactionId("");
+    setMapUrl("");
+    setLatitude(null);
+    setLongitude(null);
+    setFieldErrors({});
     onClose();
   };
 
@@ -271,40 +295,39 @@ export function OrderModal({
   };
 
   const submit = async () => {
-    if (name.trim().length < 2) {
-      setError("Please enter your name.");
-      return;
-    }
-
+    const nextErrors: Record<string, string> = {};
     const phoneDigits = phone.replace(/\D/g, "");
     const normalizedPhone =
       phoneDigits.length === 13 && phoneDigits.startsWith("8801")
         ? `0${phoneDigits.slice(3)}`
         : phoneDigits;
 
-    if (normalizedPhone.length !== 11) {
-      setError("Please enter an 11-digit Bangladesh phone number.");
-      return;
+    if (name.trim().length < 2) {
+      nextErrors.name = "Enter your full name.";
     }
-
+    if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith("01")) {
+      nextErrors.phone = "Enter a valid 11-digit Bangladesh mobile number.";
+    }
     if (address.trim().length < 5) {
-      setError("Please enter your full delivery address.");
-      return;
+      nextErrors.address = "Enter your full delivery address.";
     }
-
     if (
       email.trim() &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
     ) {
-      setError("Please enter a valid email or leave it blank.");
-      return;
+      nextErrors.email = "Enter a valid email or leave it blank.";
     }
-
     if (paymentMethod !== "cod" && transactionId.trim().length < 4) {
-      setError("Please enter your transaction ID.");
+      nextErrors.transactionId = "Enter the payment transaction ID.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setError("Please complete the highlighted fields before placing the order.");
       return;
     }
 
+    setFieldErrors({});
     setSubmitting(true);
     setError("");
 
@@ -515,12 +538,14 @@ export function OrderModal({
                   <label className="mb-2 block text-[8px] uppercase tracking-[0.35em] text-muted-foreground">
                     Name *
                   </label>
-                  <input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    autoComplete="name"
-                    placeholder="Your name"
-                    className={inputClass}
+                  <input                    value={name}
+          onChange={(event) => {
+            setName(event.target.value);
+            clearFieldError("name");
+          }}
+          autoComplete="name"
+          placeholder="Your name"
+          className={fieldClass("name")}
                   />
                 </div>
 
@@ -529,12 +554,14 @@ export function OrderModal({
                     Phone number *
                   </label>
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    autoComplete="tel"
-                    placeholder="01XXXXXXXXX"
-                    className={inputClass}
+                    type="tel"                    value={phone}
+          onChange={(event) => {
+            setPhone(event.target.value);
+            clearFieldError("phone");
+          }}
+          autoComplete="tel"
+          placeholder="01XXXXXXXXX"
+          className={fieldClass("phone")}
                   />
                 </div>
 
@@ -543,12 +570,14 @@ export function OrderModal({
                     Email
                   </label>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    autoComplete="email"
-                    placeholder="Optional — for future order emails"
-                    className={inputClass}
+                    type="email"                    value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            clearFieldError("email");
+          }}
+          autoComplete="email"
+          placeholder="Optional — for future order emails"
+          className={fieldClass("email")}
                   />
                 </div>
 
@@ -557,12 +586,14 @@ export function OrderModal({
                     Full delivery address *
                   </label>
                   <textarea
-                    rows={3}
-                    value={address}
-                    onChange={(event) => setAddress(event.target.value)}
-                    autoComplete="street-address"
-                    placeholder="House / road / area / district"
-                    className={`${inputClass} resize-none leading-relaxed`}
+                    rows={3}                    value={address}
+          onChange={(event) => {
+            setAddress(event.target.value);
+            clearFieldError("address");
+          }}
+          autoComplete="street-address"
+          placeholder="House / road / area / district"
+          className={`${fieldClass("address")} resize-none leading-relaxed`}
                   />
                 </div>
 
@@ -685,13 +716,13 @@ export function OrderModal({
                       <label className="mb-2 block text-[8px] uppercase tracking-[0.35em] text-muted-foreground">
                         Transaction ID *
                       </label>
-                      <input
-                        value={transactionId}
-                        onChange={(event) =>
-                          setTransactionId(event.target.value)
-                        }
-                        placeholder="Enter TrxID"
-                        className={inputClass}
+                      <input                        value={transactionId}
+              onChange={(event) => {
+                setTransactionId(event.target.value);
+                clearFieldError("transactionId");
+              }}
+              placeholder="Enter TrxID"
+              className={fieldClass("transactionId")}
                       />
                       <p className="mt-2 text-[8px] leading-relaxed text-muted-foreground">
                         Never share your PIN or OTP. Payment is verified manually.
@@ -712,13 +743,18 @@ export function OrderModal({
                     className={`${inputClass} resize-none leading-relaxed`}
                   />
                 </div>
-              </div>
-
-              {error && (
-                <p className="mt-5 rounded-2xl border border-border/70 bg-white/[0.02] px-4 py-3 text-[10px] leading-relaxed text-foreground">
-                  {error}
-                </p>
-              )}
+              </div>              {error && (
+      <div className="mt-5 rounded-2xl border border-red-500/45 bg-red-500/[0.05] px-4 py-3 text-[10px] leading-relaxed text-red-100">
+        <p>{error}</p>
+        {Object.keys(fieldErrors).length > 0 && (
+          <ul className="mt-2 space-y-1 text-[9px] text-red-200/90">
+            {Object.values(fieldErrors).map((message) => (
+              <li key={message}>• {message}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )}
 
               <button
                 type="button"

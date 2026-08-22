@@ -26,14 +26,44 @@ import { SITE, restockMessage } from "@/lib/site-config";
 import { OrderModal } from "@/components/site/OrderModal";
 import { addCartItem, productCartKey } from "@/lib/commerce";
 import { useSite } from "@/lib/settings";
+import { supabase } from "@/integrations/supabase/client";
 
 const pretty = (slug: string) => slug.replace(/-/g, " ").toUpperCase();
 
 export const Route = createFileRoute("/product/$slug")({
-  head: ({ params }) => {
-    const title = `${pretty(params.slug)} — ZZERKOFF`;
-    const description = `${pretty(params.slug)} — a ZZERKOFF object for the afterdark. Unisex chrome accessories.`;
+  loader: async ({ params }) => {
+    const { data } = await (supabase as any)
+      .from("products")
+      .select(
+        "name,slug,seo_title,seo_description,image_alt_text,primary_image,short_description,full_description",
+      )
+      .eq("slug", params.slug)
+      .eq("published", true)
+      .maybeSingle();
+
+    return data ?? null;
+  },
+  head: ({ params, loaderData }) => {
+    const seoProduct = loaderData as any;
+    const title =
+      seoProduct?.seo_title?.trim() ||
+      (seoProduct?.name
+        ? `${seoProduct.name} — ZZERKOFF`
+        : `${pretty(params.slug)} — ZZERKOFF`);
+    const description =
+      seoProduct?.seo_description?.trim() ||
+      seoProduct?.short_description?.trim() ||
+      seoProduct?.full_description?.trim() ||
+      `${pretty(params.slug)} — a ZZERKOFF object for the afterdark.`;
     const canonical = `https://zzerkoff.vercel.app/product/${params.slug}`;
+    const rawImage = seoProduct?.primary_image || "";
+    const image =
+      rawImage.startsWith("http")
+        ? rawImage
+        : rawImage.startsWith("/")
+? `https://zzerkoff.vercel.app${rawImage}`
+: "https://zzerkoff.vercel.app/images/zzerkoff-logo.png";
+
     return {
       meta: [
         { title },
@@ -42,13 +72,11 @@ export const Route = createFileRoute("/product/$slug")({
         { property: "og:description", content: description },
         { property: "og:type", content: "product" },
         { property: "og:url", content: canonical },
-        {
-          property: "og:image",
-          content: "https://zzerkoff.vercel.app/images/zzerkoff-logo.png",
-        },
+        { property: "og:image", content: image },
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
+        { name: "twitter:image", content: image },
       ],
       links: [{ rel: "canonical", href: canonical }],
     };
@@ -148,7 +176,10 @@ function ProductDetail({
     "@type": "Product",
     name: product.name,
     sku: product.product_code,
-    description: product.short_description || product.full_description,
+    description:
+      productAny.seo_description ||
+      product.short_description ||
+      product.full_description,
     image: [schemaImage],
     url: productUrl,
     brand: { "@type": "Brand", name: "ZZERKOFF" },
@@ -263,9 +294,8 @@ function ProductDetail({
         <Reveal className="space-y-4">
           <div className="glass-panel relative overflow-hidden rounded-[28px]">
             <SmartImage
-              src={images[0]}
-              alt={product.name}
-              width={1024}
+              src={images[0]}              alt={productAny.image_alt_text || product.name}
+    width={1024}
               height={1280}
               eager
               className="aspect-4/5 w-full object-cover grayscale"
@@ -292,9 +322,8 @@ function ProductDetail({
                   className="glass-panel overflow-hidden rounded-[22px]"
                 >
                   <SmartImage
-                    src={src}
-                    alt={`${product.name} view ${index + 2}`}
-                    width={1024}
+                    src={src}                    alt={`${productAny.image_alt_text || product.name} — view ${index + 2}`}
+          width={1024}
                     height={1024}
                     className="aspect-square w-full object-cover grayscale"
                   />

@@ -935,10 +935,10 @@ export type Database = {
           featured: boolean
           finish: string[]
           fit_gender: string
-          full_description: string
-          gallery_images: string[]
-          id: string
-          material: string
+          full_description: string          gallery_images: string[]
+id: string
+image_alt_text: string
+material: string
           material_content: string
           name: string
           new_collection: boolean
@@ -947,10 +947,11 @@ export type Database = {
           primary_image: string
           product_code: string
           published: boolean
-          quantity_available: number
-          related_product_ids: string[]
-          short_description: string
-          size_description: string
+          quantity_available: number          related_product_ids: string[]
+seo_description: string
+seo_title: string
+short_description: string
+size_description: string
           size_guide: string
           size_type: string
           sizes: string[]
@@ -977,10 +978,10 @@ export type Database = {
           featured?: boolean
           finish?: string[]
           fit_gender?: string
-          full_description?: string
-          gallery_images?: string[]
-          id?: string
-          material?: string
+          full_description?: string          gallery_images?: string[]
+id?: string
+image_alt_text?: string
+material?: string
           material_content?: string
           name: string
           new_collection?: boolean
@@ -989,10 +990,11 @@ export type Database = {
           primary_image?: string
           product_code: string
           published?: boolean
-          quantity_available?: number
-          related_product_ids?: string[]
-          short_description?: string
-          size_description?: string
+          quantity_available?: number          related_product_ids?: string[]
+seo_description?: string
+seo_title?: string
+short_description?: string
+size_description?: string
           size_guide?: string
           size_type?: string
           sizes?: string[]
@@ -1019,10 +1021,10 @@ export type Database = {
           featured?: boolean
           finish?: string[]
           fit_gender?: string
-          full_description?: string
-          gallery_images?: string[]
-          id?: string
-          material?: string
+          full_description?: string          gallery_images?: string[]
+id?: string
+image_alt_text?: string
+material?: string
           material_content?: string
           name?: string
           new_collection?: boolean
@@ -1031,10 +1033,11 @@ export type Database = {
           primary_image?: string
           product_code?: string
           published?: boolean
-          quantity_available?: number
-          related_product_ids?: string[]
-          short_description?: string
-          size_description?: string
+          quantity_available?: number          related_product_ids?: string[]
+seo_description?: string
+seo_title?: string
+short_description?: string
+size_description?: string
           size_guide?: string
           size_type?: string
           sizes?: string[]

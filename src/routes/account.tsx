@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
-import { LogOut, MapPin, PackageCheck, UserRound } from "lucide-react";
+import { Copy, LogOut, MapPin, PackageCheck, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell, PageHeading } from "@/components/site/PageShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,7 +101,7 @@ function AccountPage() {
       const { data, error } = await (supabase as any)
         .from("orders")
         .select(
-          "id,order_number,status,product_name,product_code,total_price,payment_method,payment_status,created_at",
+          "id,order_number,status,product_name,product_code,total_price,payment_method,payment_status,phone,created_at",
         )
         .eq("customer_user_id", userId)
         .order("created_at", { ascending: false });
@@ -482,29 +482,55 @@ function AccountPage() {
                   Orders placed while signed in will appear here. Older guest orders can
                   still be tracked with Order ID + phone.
                 </p>
-              ) : (
-                (ordersQuery.data ?? []).map((order: any) => (
-                  <a
-                    key={order.id}
-                    href="/track-order"
-                    className="flex flex-wrap items-center gap-3 rounded-[22px] border border-border/45 p-4 transition-colors hover:border-chrome/45"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <span className="text-[8px] uppercase tracking-[0.25em] text-muted-foreground">
-                        {order.order_number}
-                      </span>
-                      <p className="mt-2 truncate text-xs tracking-[0.06em] text-foreground">
-                        {order.product_name}
-                      </p>
-                    </div>
-                    <span className="rounded-xl border border-border/45 px-3 py-2 text-[8px] uppercase tracking-[0.2em] text-muted-foreground">
-                      {order.status}
-                    </span>
-                    <span className="text-[10px] tracking-[0.08em] text-chrome">
-                      {site.price(order.total_price)}
-                    </span>
-                  </a>
-                ))
+              ) : (                (ordersQuery.data ?? []).map((order: any) => (
+        <article
+          key={order.id}
+          className="rounded-[22px] border border-border/45 p-4"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[8px] uppercase tracking-[0.25em] text-muted-foreground">
+                {order.order_number}
+              </span>
+              <p className="mt-2 truncate text-xs tracking-[0.06em] text-foreground">
+                {order.product_name}
+              </p>
+            </div>
+            <span className="rounded-xl border border-border/45 px-3 py-2 text-[8px] uppercase tracking-[0.2em] text-muted-foreground">
+              {order.status}
+            </span>
+            <span className="text-[10px] tracking-[0.08em] text-chrome">
+              {site.price(order.total_price)}
+            </span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(order.order_number);
+                  toast.success("Order ID copied.");
+                } catch {
+                  toast.error("Could not copy the order ID.");
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-border/55 px-4 py-3 text-[8px] uppercase tracking-[0.22em] text-muted-foreground"
+            >
+              <Copy className="size-3" />
+              Copy order ID
+            </button>
+            <a
+              href={`/track-order?order=${encodeURIComponent(
+                order.order_number,
+              )}&phone=${encodeURIComponent(order.phone || "")}`}
+              className="rounded-xl border border-chrome/45 px-4 py-3 text-[8px] uppercase tracking-[0.22em] text-foreground"
+            >
+              Track order
+            </a>
+          </div>
+        </article>
+      ))
               )}
             </div>
           </div>

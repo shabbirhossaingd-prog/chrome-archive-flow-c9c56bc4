@@ -7,7 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAllCategories, useAdminProducts, type Product } from "@/lib/products";
 import { adminCollectionsQuery } from "@/lib/cms";
 import { STOCK_OPTIONS } from "@/lib/site-config";
-import { peekProductCode, reserveProductCode } from "@/lib/admin.functions";
+import {
+  generateProductContent,
+  peekProductCode,
+  reserveProductCode,
+} from "@/lib/admin.functions";
 import { ImageUploader } from "./ImageUploader";
 import { AdminButton, Field, Toggle, adminField } from "./AdminUI";
 
@@ -21,6 +25,9 @@ type Draft = {
   stock_status: string;
   short_description: string;
   full_description: string;
+  seo_title: string;
+  seo_description: string;
+  image_alt_text: string;
   material: string;
   finish: string;
   fit_gender: string;
@@ -70,6 +77,9 @@ function toDraft(p?: Product): Draft {
     stock_status: p?.stock_status ?? "IN STOCK",
     short_description: p?.short_description ?? "",
     full_description: p?.full_description ?? "",
+    seo_title: (p as any)?.seo_title ?? "",
+    seo_description: (p as any)?.seo_description ?? "",
+    image_alt_text: (p as any)?.image_alt_text ?? "",
     material: p?.material ?? "",
     finish: csv(p?.finish),
     fit_gender: p?.fit_gender ?? "UNISEX",
@@ -111,6 +121,8 @@ async function uniqueSlug(base: string, currentId?: string) {
 export function ProductForm({ product }: { product?: Product }) {
   const [d, setD] = useState<Draft>(() => toDraft(product));
   const [dirty, setDirty] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [aiBusy, setAiBusy] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: categories = [] } = useAllCategories();
@@ -118,6 +130,7 @@ export function ProductForm({ product }: { product?: Product }) {
   const { data: collections = [] } = useQuery(adminCollectionsQuery);
   const reserveCode = useServerFn(reserveProductCode);
   const previewCode = useServerFn(peekProductCode);
+  const generateCopy = useServerFn(generateProductContent);
 
   const { data: codePreview, isFetching: codeLoading } = useQuery({
     queryKey: ["product-code-preview", d.category],
@@ -135,7 +148,31 @@ export function ProductForm({ product }: { product?: Product }) {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
+  const clearFieldError = (key: string) => {
+    setValidationErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const fieldClass = (key: string) =>
+    `${adminField} ${
+      validationErrors[key]
+        ? "border-red-500/80 focus:border-red-500"
+        : ""
+    }`;
+
+  const errorText = (key: string) =>
+    validationErrors[key] ? (
+      <p className="mt-2 text-[9px] leading-relaxed text-red-400">
+        {validationErrors[key]}
+      </p>
+    ) : null;
+
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+    clearFieldError(String(key));
     setDirty(true);
     setD((prev) => ({ ...prev, [key]: value }));
   };
@@ -147,11 +184,112 @@ export function ProductForm({ product }: { product?: Product }) {
 
   const relatedCandidates = products.filter((p) => p.id !== product?.id);
 
+  const validate = (publish: boolean) => {
+    const errors: Record<string, string> = {};
+
+    if (!d.name.trim()) errors.name = "Product name is required.";
+    if (!d.category) errors.category = "Category is required.";
+
+    if (publish) {
+      if (!d.price.trim() || Number(d.price) <= 0) {
+        errors.price = "Enter a valid product price.";
+      }
+      if (!d.short_description.trim()) {
+        errors.short_description = "Short description is required.";
+      }
+      if (!d.full_description.trim()) {
+        errors.full_description = "Full description is required.";
+      }
+      if (!d.material.trim()) {
+        errors.material = "Material is required. Use 'Unknown / not confirmed' if necessary.";
+      }
+      if (!d.finish.trim()) {
+        errors.finish = "Finish / color is required.";
+      }
+      if (d.quantity_available.trim() === "" || Number(d.quantity_available) < 0) {
+        errors.quantity_available = "Enter a valid stock quantity.";
+      }
+      if (d.size_type !== "ONE SIZE" && !d.sizes.trim()) {
+        errors.sizes = "Add available sizes for this size type.";
+      }
+      if (!d.primary_image) {
+        errors.primary_image = "Main product image is required before publishing.";
+      }
+      if (!d.seo_title.trim()) {
+        errors.seo_title = "SEO title is required.";
+      }
+      if (!d.seo_description.trim()) {
+        errors.seo_description = "Meta description is required.";
+      }
+      if (!d.image_alt_text.trim()) {
+        errors.image_alt_text = "Main image ALT text is required.";
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const generateWithAi = async () => {
+    const errors: Record<string, string> = {};
+    if (!d.name.trim()) errors.name = "Enter the product name before using AI.";
+    if (!d.category) errors.category = "Select the category before using AI.";
+
+    if (Object.keys(errors).length) {
+      setValidationErrors((prev) => ({ ...prev, ...errors }));
+      toast.error("Add product name and category first.");
+      return;
+    }
+
+    setAiBusy(true);
+    try {
+      const result = await generateCopy({
+        data: {
+name: d.name,
+category: d.category,
+material: d.material,
+finish: d.finish,
+fit_gender: d.fit_gender,
+sizes: d.sizes,
+size_description: d.size_description,
+existing_description: d.full_description,
+        },
+      });
+
+      setDirty(true);
+      setD((prev) => ({
+        ...prev,
+        slug: result.slug ? slugify(result.slug) : prev.slug || slugify(prev.name),
+        short_description: result.short_description,
+        full_description: result.full_description,
+        tags: result.tags.join(", "),
+        details_content: result.details_content,
+        material_content: result.material_content,
+        care: result.care,
+        seo_title: result.seo_title,
+        seo_description: result.seo_description,
+        image_alt_text: result.image_alt_text,
+      }));
+      setValidationErrors({});
+      toast.success("AI content generated. Review and edit it before publishing.");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not generate product content.",
+      );
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   const save = useMutation({
     mutationFn: async ({ publish }: { publish: boolean }) => {
-      if (!d.name.trim()) throw new Error("Product name is required");
-      if (!d.category) throw new Error("Pick a category");
-      if (publish && !d.primary_image) throw new Error("Add a main image before publishing");
+      if (!validate(publish)) {
+        throw new Error(
+publish
+  ? "Complete the highlighted required fields before publishing."
+  : "Product name and category are required to save a draft.",
+        );
+      }
 
       const qty = Math.max(0, Number(d.quantity_available || 0));
       const status = qty <= 0 ? "SOLD OUT" : d.stock_status;
@@ -167,6 +305,9 @@ export function ProductForm({ product }: { product?: Product }) {
         stock_status: status,
         short_description: d.short_description,
         full_description: d.full_description,
+        seo_title: d.seo_title,
+        seo_description: d.seo_description,
+        image_alt_text: d.image_alt_text,
         material: d.material,
         finish: fromCsv(d.finish),
         fit_gender: d.fit_gender,
@@ -260,20 +401,50 @@ export function ProductForm({ product }: { product?: Product }) {
             </p>
           </div>
         </div>
-      </div>
+      </div>      <section className="glass-panel space-y-5 rounded-[24px] p-6">
+        <div>
+<h2 className="font-display text-sm tracking-[0.22em] text-foreground">
+  AI CONTENT + SEO
+</h2>
+<p className="mt-3 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">
+  Generate product copy and SEO from the facts you entered. AI never publishes automatically.
+  Review every generated field and edit anything you want.
+</p>
+        </div>
+        <AdminButton
+tone="primary"
+disabled={aiBusy}
+onClick={() => void generateWithAi()}
+        >
+{aiBusy ? "Generating…" : "Generate with Gemini AI"}
+        </AdminButton>
+      </section>
+
+      {Object.keys(validationErrors).length > 0 && (
+        <section className="rounded-[22px] border border-red-500/45 bg-red-500/[0.06] p-5">
+<p className="text-[9px] uppercase tracking-[0.32em] text-red-300">
+  Required information missing
+</p>
+<ul className="mt-3 space-y-1 text-[10px] leading-relaxed text-red-200/90">
+  {Object.values(validationErrors).map((message) => (
+    <li key={message}>• {message}</li>
+  ))}
+</ul>
+        </section>
+      )}
 
       <section className="glass-panel space-y-6 rounded-[24px] p-6">
         <h2 className="font-display text-sm tracking-[0.22em] text-foreground">
-          BASIC INFORMATION
+BASIC INFORMATION
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Product name">
+          <Field label="Product name *">
             <input
-              className={adminField}
-              value={d.name}
-              onChange={(e) => {
-                const name = e.target.value;
-                setDirty(true);
+              className={fieldClass("name")}
+              value={d.name}              onChange={(e) => {
+      const name = e.target.value;
+      clearFieldError("name");
+      setDirty(true);
                 setD((prev) => ({
                   ...prev,
                   name,
@@ -289,9 +460,9 @@ export function ProductForm({ product }: { product?: Product }) {
               onChange={(e) => set("slug", slugify(e.target.value))}
             />
           </Field>
-          <Field label="Category">
+          <Field label="Category *">
             <select
-              className={adminField}
+              className={fieldClass("category")}
               value={d.category}
               onChange={(e) => set("category", e.target.value)}
             >
@@ -317,9 +488,9 @@ export function ProductForm({ product }: { product?: Product }) {
               ))}
             </select>
           </Field>
-          <Field label="Price">
+          <Field label="Price *">
             <input
-              className={adminField}
+              className={fieldClass("price")}
               type="number"
               min={0}
               value={d.price}
@@ -337,17 +508,17 @@ export function ProductForm({ product }: { product?: Product }) {
           </Field>
         </div>
 
-        <Field label="Short description">
+        <Field label="Short description *">
           <textarea
-            className={adminField}
+            className={fieldClass("short_description")}
             rows={2}
             value={d.short_description}
             onChange={(e) => set("short_description", e.target.value)}
           />
         </Field>
-        <Field label="Full description">
+        <Field label="Full description *">
           <textarea
-            className={adminField}
+            className={fieldClass("full_description")}
             rows={5}
             value={d.full_description}
             onChange={(e) => set("full_description", e.target.value)}
@@ -360,16 +531,16 @@ export function ProductForm({ product }: { product?: Product }) {
           PRODUCT ATTRIBUTES
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Material">
+          <Field label="Material *">
             <input
-              className={adminField}
+              className={fieldClass("material")}
               value={d.material}
               onChange={(e) => set("material", e.target.value)}
             />
           </Field>
-          <Field label="Finish / color (comma separated)">
+          <Field label="Finish / color (comma separated) *">
             <input
-              className={adminField}
+              className={fieldClass("finish")}
               value={d.finish}
               onChange={(e) => set("finish", e.target.value)}
               placeholder="CHROME, GUNMETAL"
@@ -412,7 +583,7 @@ export function ProductForm({ product }: { product?: Product }) {
           </Field>
           <Field label="Available sizes (comma separated)">
             <input
-              className={adminField}
+              className={fieldClass("sizes")}
               value={d.sizes}
               onChange={(e) => set("sizes", e.target.value)}
               placeholder="6, 7, 8, 9 or S, M, L"
@@ -440,9 +611,9 @@ export function ProductForm({ product }: { product?: Product }) {
       <section className="glass-panel space-y-6 rounded-[24px] p-6">
         <h2 className="font-display text-sm tracking-[0.22em] text-foreground">STOCK</h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Quantity available">
+          <Field label="Quantity available *">
             <input
-              className={adminField}
+              className={fieldClass("quantity_available")}
               type="number"
               min={0}
               value={d.quantity_available}
@@ -513,14 +684,59 @@ export function ProductForm({ product }: { product?: Product }) {
         </div>
       </section>
 
+      <section className="glass-panel space-y-6 rounded-[24px] p-6">
+        <div>
+<h2 className="font-display text-sm tracking-[0.22em] text-foreground">
+  SEARCH / SEO
+</h2>
+<p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+  Gemini can fill these fields, but they remain fully editable. These values are used on the public product page.
+</p>
+        </div>
+
+        <Field label="SEO title *">
+<input
+  className={fieldClass("seo_title")}
+  value={d.seo_title}
+  maxLength={70}
+  onChange={(e) => set("seo_title", e.target.value)}
+  placeholder="Product search title"
+/>
+{errorText("seo_title")}
+        </Field>
+
+        <Field label="Meta description *">
+<textarea
+  className={fieldClass("seo_description")}
+  rows={3}
+  value={d.seo_description}
+  maxLength={170}
+  onChange={(e) => set("seo_description", e.target.value)}
+  placeholder="Search result description"
+/>
+{errorText("seo_description")}
+        </Field>
+
+        <Field label="Main image ALT text *">
+<input
+  className={fieldClass("image_alt_text")}
+  value={d.image_alt_text}
+  maxLength={140}
+  onChange={(e) => set("image_alt_text", e.target.value)}
+  placeholder="Accessible description of the main product image"
+/>
+{errorText("image_alt_text")}
+        </Field>
+      </section>
+
       <section className="glass-panel space-y-7 rounded-[24px] p-6">
-        <h2 className="font-display text-sm tracking-[0.22em] text-foreground">IMAGES</h2>
-        <ImageUploader
-          label="Main image"
-          max={1}
-          value={d.primary_image ? [d.primary_image] : []}
-          onChange={(next) => set("primary_image", next[0] ?? "")}
+        <h2 className="font-display text-sm tracking-[0.22em] text-foreground">IMAGES</h2>        <ImageUploader
+label="Main image *"
+max={1}
+value={d.primary_image ? [d.primary_image] : []}
+onChange={(next) => set("primary_image", next[0] ?? "")}
         />
+        {errorText("primary_image")}
         <ImageUploader
           label="Gallery"
           max={5}
