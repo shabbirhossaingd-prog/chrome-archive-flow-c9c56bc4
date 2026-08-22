@@ -10,7 +10,7 @@ Overall Visual Direction
 
 Use a pure black + charcoal + chrome silver color system.
 
-Main colors: 
+Main colors:
 
 Background: #050505
 
