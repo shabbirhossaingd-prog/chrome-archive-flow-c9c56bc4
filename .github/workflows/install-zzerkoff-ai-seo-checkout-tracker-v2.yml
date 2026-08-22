@@ -1,0 +1,135 @@
+name: Install ZZERKOFF AI SEO Checkout Tracker V2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Create safety backup branch
+        shell: bash
+        run: |
+          set -e
+          BACKUP="backup-before-ai-seo-v2-${GITHUB_RUN_ID}"
+          git branch "$BACKUP"
+          git push origin "$BACKUP"
+          echo "Safety backup: $BACKUP"
+
+      - name: Run corrected installer
+        shell: bash
+        run: |
+          set -e
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          installer = Path(".github/workflows/install-zzerkoff-ai-seo-checkout-tracker.yml")
+          if not installer.exists():
+              raise SystemExit("Original AI SEO installer workflow was not found.")
+
+          raw = installer.read_text()
+          marker_start = "          python3 <<'PY'\n"
+          marker_end = "\n          PY"
+
+          if marker_start not in raw:
+              raise SystemExit("Could not find installer Python start marker.")
+
+          start = raw.index(marker_start) + len(marker_start)
+          end = raw.index(marker_end, start)
+          block = raw[start:end]
+
+          # GitHub Actions removes the YAML block indentation before the shell
+          # executes it. Reproduce that exact script here.
+          script_lines = []
+          for line in block.splitlines():
+              if line.startswith("          "):
+                  script_lines.append(line[10:])
+              else:
+                  script_lines.append(line)
+          script = "\n".join(script_lines)
+
+          old_fn = '''def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if old not in text:
+                  raise SystemExit(f"Patch anchor not found: {label}")
+              return text.replace(old, new, 1)'''
+
+          new_fn = r'''def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if old in text:
+                  return text.replace(old, new, 1)
+
+              # V1's YAML formatting changed whitespace inside some multiline
+              # anchors. Fall back to a whitespace-tolerant single replacement.
+              tokens = re.split(r"(\s+)", old)
+              pattern = "".join(
+                  r"\s+" if token.isspace() else re.escape(token)
+                  for token in tokens
+                  if token
+              )
+              updated, count = re.subn(
+                  pattern,
+                  lambda _match: new,
+                  text,
+                  count=1,
+                  flags=re.MULTILINE,
+              )
+              if count != 1:
+                  raise SystemExit(f"Patch anchor not found: {label}")
+              return updated'''
+
+          if old_fn not in script:
+              raise SystemExit("Could not patch the V1 replace_once helper.")
+
+          script = script.replace(old_fn, new_fn, 1)
+
+          # The V1 script uses `re` in the corrected helper.
+          script = script.replace(
+              "from pathlib import Path\n",
+              "from pathlib import Path\nimport re\n",
+              1,
+          )
+
+          exec(compile(script, "zzerkoff-ai-seo-installer-v2.py", "exec"), {})
+          PY
+
+      - name: Check diff
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build test
+        run: bun run build
+
+      - name: Commit upgrade
+        shell: bash
+        run: |
+          set -e
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name "ZZERKOFF Installer"
+          git config user.email "actions@users.noreply.github.com"
+          git add             src/lib/admin.functions.ts             src/components/admin/ProductForm.tsx             src/integrations/supabase/types.ts             'src/routes/product.$slug.tsx'             src/components/site/OrderModal.tsx             src/routes/track-order.tsx             src/routes/account.tsx             supabase/migrations/20260822205000_product_ai_seo.sql
+
+          git commit -m "Add Gemini product SEO and safer checkout tracking"
+          git push origin main
