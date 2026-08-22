@@ -13,6 +13,7 @@ const quickLinks = [
   { label: "MANAGE ORDERS", to: "/admin/orders" as const },
   { label: "+ NEW BLOG POST", to: "/admin/blog/new" as const },
   { label: "MANAGE OBJECTS", to: "/admin/products" as const },
+  { label: "MANAGE CATEGORIES", to: "/admin/categories" as const },
   { label: "MANAGE COLLECTIONS", to: "/admin/collections" as const },
   { label: "EDIT WEBSITE", to: "/admin/pages" as const },
   { label: "SETTINGS", to: "/admin/settings" as const },

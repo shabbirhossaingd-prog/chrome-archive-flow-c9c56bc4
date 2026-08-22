@@ -20,6 +20,7 @@ const DESKTOP_NAV = [
   { label: "DASHBOARD", to: "/admin" as const },
   { label: "ORDERS", to: "/admin/orders" as const },
   { label: "OBJECTS", to: "/admin/products" as const },
+  { label: "CATEGORIES", to: "/admin/categories" as const },
   { label: "NEW OBJECT", to: "/admin/products/new" as const },
   { label: "COLLECTIONS", to: "/admin/collections" as const },
   { label: "ARCHIVE", to: "/admin/archive" as const },
@@ -39,6 +40,7 @@ const MOBILE_MAIN = [
 
 const MOBILE_MORE = [
   { label: "NEW OBJECT", to: "/admin/products/new" as const },
+  { label: "CATEGORIES", to: "/admin/categories" as const },
   { label: "COLLECTIONS", to: "/admin/collections" as const },
   { label: "ARCHIVE", to: "/admin/archive" as const },
   { label: "PAGES", to: "/admin/pages" as const },
