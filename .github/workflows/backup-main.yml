@@ -1,0 +1,36 @@
+name: Backup Main Before Update
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create backup of previous main
+        run: |
+          BEFORE_SHA="${{ github.event.before }}"
+
+          if [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "No previous commit found. Skipping backup."
+            exit 0
+          fi
+
+          SHORT_SHA="${BEFORE_SHA:0:7}"
+          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+          BACKUP_BRANCH="backup-${TIMESTAMP}-${SHORT_SHA}"
+
+          echo "Creating backup branch: $BACKUP_BRANCH"
+
+          git push origin "$BEFORE_SHA:refs/heads/$BACKUP_BRANCH"
