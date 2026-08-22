@@ -92,8 +92,7 @@ function Index() {
     Array.from(new Set(newDrop.map((p) => p.category.replace(/-/g, " ").toUpperCase()))).join(" / ") ||
     "OBJECTS";
 
-  const featuredList = newDrop.filter((p) => p.featured);
-  const featured = featuredList[0] ?? newDrop[0] ?? products[0];
+  const featured = products.find((p) => p.featured);
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-background">
