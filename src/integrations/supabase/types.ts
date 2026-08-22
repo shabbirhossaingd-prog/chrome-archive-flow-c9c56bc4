@@ -109,6 +109,9 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          og_image: string
+          seo_description: string
+          seo_title: string
           slug: string
           sort_order: number
         }
@@ -119,6 +122,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          og_image?: string
+          seo_description?: string
+          seo_title?: string
           slug: string
           sort_order?: number
         }
@@ -129,6 +135,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          og_image?: string
+          seo_description?: string
+          seo_title?: string
           slug?: string
           sort_order?: number
         }

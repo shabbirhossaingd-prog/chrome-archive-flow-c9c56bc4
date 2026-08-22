@@ -8,7 +8,7 @@ import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Reveal } from "@/components/site/Reveal";
 import { Toaster } from "@/components/ui/sonner";
-import { useCategories, useProducts, formatPrice } from "@/lib/products";
+import { useCategories, useProducts, formatPrice, prettyCategory } from "@/lib/products";
 import { ProductGrid } from "@/components/site/ProductGrid";
 import { CategoryCard } from "@/components/site/CategoryCard";
 import { SmartImage } from "@/components/site/SmartImage";
@@ -92,8 +92,7 @@ function Index() {
     Array.from(new Set(newDrop.map((p) => p.category.replace(/-/g, " ").toUpperCase()))).join(" / ") ||
     "OBJECTS";
 
-  const featuredList = newDrop.filter((p) => p.featured);
-  const featured = featuredList[0] ?? newDrop[0] ?? products[0];
+  const featured = products.find((p) => p.featured);
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-background">
@@ -176,42 +175,45 @@ function Index() {
       </section>
 
       {/* FEATURED */}
-      <section className="perf-below-fold relative isolate overflow-hidden px-5 py-24 sm:px-8">
-        <LiquidChrome className="-right-40 top-0 h-[42rem] w-[42rem]" opacity={0.2} flip />
-        <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <Reveal className="glass-panel relative overflow-hidden rounded-[28px]">
-            <SmartImage
-              src={featured?.primary_image}
-              alt={featured?.name ?? "Featured object"}
-              width={1024}
-              height={1280}
-              className="aspect-4/5 w-full object-cover grayscale"
-            />
-            <div className="grain-overlay" />
-          </Reveal>
+      {featured ? (
+        <section className="perf-below-fold relative isolate overflow-hidden px-5 py-24 sm:px-8">
+          <LiquidChrome className="-right-40 top-0 h-[42rem] w-[42rem]" opacity={0.2} flip />
+          <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
+            <Reveal className="glass-panel relative overflow-hidden rounded-[28px]">
+              <SmartImage
+                src={featured.primary_image}
+                alt={featured.name}
+                width={1024}
+                height={1280}
+                className="aspect-4/5 w-full object-cover grayscale"
+              />
+              <div className="grain-overlay" />
+            </Reveal>
 
-          <Reveal delay={150}>
-            <SectionLabel>{`${dropCode} / 01`}</SectionLabel>
-            <h2 className="mt-5 font-display text-2xl tracking-[0.18em] text-foreground sm:text-4xl">
-              {featured?.name ?? "—"}
-            </h2>
-            <p className="mt-5 text-sm tracking-[0.25em] text-chrome">
-              {featured ? formatPrice(featured.price) : ""}
-            </p>
-            <p className="mt-6 text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
-              {featured?.short_description}
-            </p>
-            <Link
-              to="/product/$slug"
-              params={{ slug: featured?.slug ?? "" }}
-              className="group mt-12 inline-flex items-center gap-4 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-5 text-[10px] uppercase tracking-[0.45em] text-foreground transition-all duration-700 hover:border-chrome hover:bg-white/[0.08]"
-            >
-              View object
-              <ArrowUpRight className="size-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-            </Link>
-          </Reveal>
-        </div>
-      </section>
+            <Reveal delay={150}>
+              <SectionLabel>{`SIGNATURE OBJECT / ${prettyCategory(featured.category)}`}</SectionLabel>
+              <h2 className="mt-5 font-display text-2xl tracking-[0.18em] text-foreground sm:text-4xl">
+                {featured.name}
+              </h2>
+              <p className="mt-5 text-sm tracking-[0.25em] text-chrome">
+                {formatPrice(featured.price)}
+              </p>
+              <p className="mt-6 text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+                {featured.short_description}
+              </p>
+              <Link
+                to="/product/$slug"
+                params={{ slug: featured.slug }}
+                className="group mt-12 inline-flex items-center gap-4 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-5 text-[10px] uppercase tracking-[0.45em] text-foreground transition-all duration-700 hover:border-chrome hover:bg-white/[0.08]"
+              >
+                View object
+                <ArrowUpRight className="size-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </Link>
+            </Reveal>
+          </div>
+        </section>
+      ) : null}
+
 
       {/* SHOP BY OBJECT */}
       <section className="perf-below-fold relative px-5 py-24 sm:px-8">
