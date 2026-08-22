@@ -8,7 +8,7 @@ import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { ProductCard } from "@/components/site/ProductCard";
 import { Reveal } from "@/components/site/Reveal";
 import { Toaster } from "@/components/ui/sonner";
-import { useCategories, useProducts, formatPrice } from "@/lib/products";
+import { useCategories, useProducts, formatPrice, prettyCategory } from "@/lib/products";
 import { ProductGrid } from "@/components/site/ProductGrid";
 import { CategoryCard } from "@/components/site/CategoryCard";
 import { SmartImage } from "@/components/site/SmartImage";
