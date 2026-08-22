@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
@@ -33,6 +34,7 @@ const schema = z.object({
 
 function AdminLogin() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({ email: "", password: "" });
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -57,6 +59,8 @@ function AdminLogin() {
       toast.error("Incorrect email or password.");
       return;
     }
+    await supabase.auth.getSession();
+    queryClient.removeQueries({ queryKey: ["admin-access"] });
     navigate({ to: "/admin", replace: true });
   };
 

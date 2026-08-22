@@ -27,12 +27,26 @@ export const ensureAdmin = createServerFn({ method: "POST" })
       .eq("role", "admin")
       .limit(1);
 
-    if (error) throw error;
+    if (error) {
+      console.error("[ensureAdmin] role lookup failed", {
+        userId: context.userId,
+        email: (context.claims as { email?: string })?.email,
+        error: error.message,
+      });
+      throw error;
+    }
 
-    return {
-      isAdmin: (roles ?? []).length > 0,
-    };
+    const isAdmin = (roles ?? []).length > 0;
+    if (!isAdmin) {
+      console.warn("[ensureAdmin] no admin role", {
+        userId: context.userId,
+        email: (context.claims as { email?: string })?.email,
+      });
+    }
+
+    return { isAdmin };
   });
+
 
 export const peekProductCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
