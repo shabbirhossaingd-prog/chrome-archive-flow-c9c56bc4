@@ -566,7 +566,11 @@ export function ProductForm({ product }: { product?: Product }) {
       <section className="glass-panel space-y-5 rounded-[24px] p-6">
         <h2 className="font-display text-sm tracking-[0.22em] text-foreground">VISIBILITY</h2>
         <div className="flex flex-wrap gap-3">
-          <Toggle label="Featured" checked={d.featured} onChange={(v) => set("featured", v)} />
+          <Toggle
+            label="Featured Product"
+            checked={d.featured}
+            onChange={(v) => set("featured", v)}
+          />
           <Toggle
             label="New collection"
             checked={d.new_collection}
