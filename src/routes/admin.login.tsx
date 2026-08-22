@@ -57,6 +57,8 @@ function AdminLogin() {
       toast.error("Incorrect email or password.");
       return;
     }
+    await supabase.auth.getSession();
+    queryClient.removeQueries({ queryKey: ["admin-access"] });
     navigate({ to: "/admin", replace: true });
   };
 
