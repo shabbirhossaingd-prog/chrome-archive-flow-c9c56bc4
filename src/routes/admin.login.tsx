@@ -33,6 +33,7 @@ const schema = z.object({
 
 function AdminLogin() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({ email: "", password: "" });
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
