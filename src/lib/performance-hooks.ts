@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 const INTERACTION_EVENT = "zzerkoff:performance-interaction";
+const HOMEPAGE_MIN_DELAY_MS = 7500;
 let interactionSeen = false;
 let trackingInstalled = false;
 
@@ -20,9 +21,9 @@ function installInteractionTracking() {
 }
 
 /**
- * Defers non-critical homepage work until after the hero has had time to paint.
- * Any real user interaction releases the work immediately, so navigation,
- * search and below-fold content never feel artificially delayed.
+ * Keeps non-critical homepage network work out of the initial hero paint.
+ * Real interaction (scroll, tap or key press) releases it immediately, so
+ * customers never wait when they actually start using the page.
  */
 export function useHomepageDeferredEnabled(enabled = true, delayMs = 2200) {
   const [ready, setReady] = useState(false);
@@ -42,7 +43,10 @@ export function useHomepageDeferredEnabled(enabled = true, delayMs = 2200) {
     }
 
     const activate = () => setReady(true);
-    const timer = window.setTimeout(activate, delayMs);
+    const timer = window.setTimeout(
+      activate,
+      Math.max(delayMs, HOMEPAGE_MIN_DELAY_MS),
+    );
     window.addEventListener(INTERACTION_EVENT, activate, { once: true });
 
     return () => {
