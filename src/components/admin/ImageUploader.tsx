@@ -5,63 +5,113 @@ import { supabase } from "@/integrations/supabase/client";
 import { SmartImage, toStorageRef } from "@/components/site/SmartImage";
 import { adminLabel, AdminButton } from "./AdminUI";
 
-const MAX_IMAGE_EDGE = 2200;
-const OPTIMIZE_FROM_BYTES = 700 * 1024;
+const MAX_IMAGE_EDGE = 1800;
+const WEBP_QUALITIES = [0.84, 0.78, 0.72] as const;
+const TARGET_BYTES = 550 * 1024;
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+async function loadImage(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = objectUrl;
+    await image.decode();
+    return image;
+  } catch {
+    throw new Error("This image could not be decoded. Please use JPG, PNG, WebP or another browser-supported image format.");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function canvasToWebp(canvas: HTMLCanvasElement, quality: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob || blob.type !== "image/webp") {
+          reject(new Error("Your browser could not convert this image to WebP."));
+          return;
+        }
+        resolve(blob);
+      },
+      "image/webp",
+      quality,
+    );
+  });
+}
+
+/**
+ * Product uploads are normalized before they ever reach Supabase Storage.
+ * JPG / PNG / browser-decodable images become WebP, oversized images are
+ * resized, and already-efficient WebP files are never made larger.
+ */
 async function optimizeForWeb(file: File) {
+  const image = await loadImage(file);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+
+  if (!sourceWidth || !sourceHeight) {
+    throw new Error("The selected image has invalid dimensions.");
+  }
+
+  const scale = Math.min(
+    1,
+    MAX_IMAGE_EDGE / Math.max(sourceWidth, sourceHeight),
+  );
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d", { alpha: true });
+  if (!context) throw new Error("Image optimization is not available in this browser.");
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, 0, 0, width, height);
+
+  let bestBlob: Blob | null = null;
+  for (const quality of WEBP_QUALITIES) {
+    const blob = await canvasToWebp(canvas, quality);
+    if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+
+    // Keep the highest quality step once the image is already web-friendly.
+    if (blob.size <= TARGET_BYTES || blob.size <= file.size * 0.65) {
+      bestBlob = blob;
+      break;
+    }
+  }
+
+  if (!bestBlob) throw new Error("Image optimization failed.");
+
+  // If the source is already WebP, within the dimension cap and smaller than
+  // our re-encode, keep it. It is already in the desired web format.
   if (
-    file.type === "image/svg+xml" ||
-    file.type === "image/gif" ||
-    typeof createImageBitmap === "undefined"
+    file.type === "image/webp" &&
+    scale === 1 &&
+    file.size <= bestBlob.size
   ) {
     return file;
   }
 
-  if (file.size < OPTIMIZE_FROM_BYTES) return file;
-
-  let bitmap: ImageBitmap | null = null;
-  try {
-    bitmap = await createImageBitmap(file);
-    const scale = Math.min(
-      1,
-      MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height),
-    );
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-
-    const context = canvas.getContext("2d", { alpha: true });
-    if (!context) return file;
-
-    context.drawImage(bitmap, 0, 0, width, height);
-
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/webp", 0.88),
-    );
-
-    if (!blob || blob.size >= file.size * 0.95) return file;
-
-    const name = file.name.replace(/\.[^.]+$/, "") || "zzerkoff-object";
-    return new File([blob], `${name}.webp`, {
-      type: "image/webp",
-      lastModified: Date.now(),
-    });
-  } catch {
-    return file;
-  } finally {
-    bitmap?.close();
-  }
+  const name = file.name.replace(/\.[^.]+$/, "") || "zzerkoff-object";
+  return new File([bestBlob], `${name}.webp`, {
+    type: "image/webp",
+    lastModified: Date.now(),
+  });
 }
 
 async function upload(file: File) {
   const optimized = await optimizeForWeb(file);
-  const ext =
-    optimized.name.split(".").pop()?.toLowerCase() ||
-    (optimized.type === "image/webp" ? "webp" : "jpg");
-  const path = `${crypto.randomUUID()}.${ext}`;
+  const path = `${crypto.randomUUID()}.webp`;
 
   const { error } = await supabase.storage
     .from("product-images")
@@ -69,11 +119,15 @@ async function upload(file: File) {
       // UUID paths are immutable, so browsers/CDNs can safely cache them.
       cacheControl: "31536000",
       upsert: false,
-      contentType: optimized.type || "image/jpeg",
+      contentType: "image/webp",
     });
 
   if (error) throw error;
-  return toStorageRef(path);
+  return {
+    ref: toStorageRef(path),
+    before: file.size,
+    after: optimized.size,
+  };
 }
 
 export function ImageUploader({
@@ -101,13 +155,26 @@ export function ImageUploader({
     setBusy(true);
     try {
       const refs: string[] = [];
+      let beforeBytes = 0;
+      let afterBytes = 0;
+
       for (const file of Array.from(files).slice(0, room)) {
         if (!file.type.startsWith("image/")) throw new Error("Only image files are allowed");
         if (file.size > 12 * 1024 * 1024) throw new Error("Each image must be under 12MB");
-        refs.push(await upload(file));
+
+        const result = await upload(file);
+        refs.push(result.ref);
+        beforeBytes += result.before;
+        afterBytes += result.after;
       }
+
       onChange([...value, ...refs]);
-      toast.success("Image uploaded");
+      const saved = Math.max(0, beforeBytes - afterBytes);
+      toast.success(
+        saved > 0
+          ? `WebP optimized · ${formatBytes(beforeBytes)} → ${formatBytes(afterBytes)} (saved ${formatBytes(saved)})`
+          : `WebP optimized · ${formatBytes(afterBytes)}`,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Image upload failed");
     } finally {
@@ -146,6 +213,9 @@ export function ImageUploader({
       <span className={adminLabel}>
         {label} ({value.length}/{max})
       </span>
+      <p className="mb-3 text-[8px] uppercase tracking-[0.22em] text-muted-foreground">
+        Auto optimized to WebP · max {MAX_IMAGE_EDGE}px · high quality
+      </p>
       <div className="flex flex-wrap gap-3">
         {value.map((ref, index) => (
           <div key={`${ref}-${index}`} className="relative rounded-xl border border-border/60 p-1">
@@ -194,7 +264,7 @@ export function ImageUploader({
           onClick={() => inputRef.current?.click()}
           className="h-20"
         >
-          {busy ? "Uploading…" : "Add image"}
+          {busy ? "Optimizing…" : "Add image"}
         </AdminButton>
       </div>
 
