@@ -11,22 +11,41 @@
 
 @media (max-width: 639px) {
   .glass-panel {
-    backdrop-filter: blur(10px) saturate(112%);
-    -webkit-backdrop-filter: blur(10px) saturate(112%);
+    backdrop-filter: blur(8px) saturate(108%);
+    -webkit-backdrop-filter: blur(8px) saturate(108%);
   }
 
   .liquid-chrome-image {
-    filter: blur(13px) grayscale(1) contrast(1.32);
+    filter: blur(9px) grayscale(1) contrast(1.28);
     animation: none !important;
     will-change: auto;
   }
 
+  .home-hero-chrome-primary {
+    width: 30rem !important;
+    height: 30rem !important;
+    opacity: 0.72;
+  }
+
+  .home-hero-chrome-secondary {
+    display: none;
+  }
+
+  .home-hero-logo {
+    animation: none !important;
+    transform: translateZ(0);
+  }
+
+  .home-hero-grain {
+    opacity: 0.055 !important;
+  }
+
   .grain-overlay {
-    opacity: 0.1;
+    opacity: 0.08;
   }
 
   .reveal {
-    transition-duration: 900ms;
+    transition-duration: 620ms;
   }
 }
 
@@ -44,7 +63,7 @@
   }
 }
 
-/* V2: postpone far below-fold layout/paint work without changing the final visual. */
+/* Postpone far below-fold layout/paint work without changing the final visual. */
 @media (max-width: 767px) {
   .perf-below-fold {
     content-visibility: auto;
