@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { cartItems } from "@/lib/commerce";
+import { useHomepageDeferredEnabled } from "@/lib/performance-hooks";
 
 declare global {
   interface Window {
@@ -74,8 +75,10 @@ function snapshotCart() {
 
 export function Analytics() {
   const location = useLocation();
+  const analyticsReady = useHomepageDeferredEnabled(true, 2600);
 
   useEffect(() => {
+    if (!analyticsReady) return;
     loadAnalytics();
     const pagePath = `${location.pathname}${location.searchStr || ""}`;
 
@@ -100,9 +103,10 @@ export function Analytics() {
         content_type: "product",
       });
     }
-  }, [location.pathname, location.searchStr]);
+  }, [analyticsReady, location.pathname, location.searchStr]);
 
   useEffect(() => {
+    if (!analyticsReady) return;
     loadAnalytics();
     let previous = snapshotCart();
 
@@ -144,9 +148,10 @@ export function Analytics() {
 
     window.addEventListener(COMMERCE_EVENT, onCommerceChange);
     return () => window.removeEventListener(COMMERCE_EVENT, onCommerceChange);
-  }, []);
+  }, [analyticsReady]);
 
   useEffect(() => {
+    if (!analyticsReady) return;
     loadAnalytics();
     const checkPurchases = () => {
       try {
@@ -181,7 +186,7 @@ export function Analytics() {
     checkPurchases();
     const timer = window.setInterval(checkPurchases, 1500);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [analyticsReady]);
 
   return null;
 }
