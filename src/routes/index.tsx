@@ -5,6 +5,7 @@ import { Footer } from "@/components/site/Footer";
 import { Marquee } from "@/components/site/Marquee";
 import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
+import { HomepageBanner } from "@/components/site/HomepageBanner";
 import { Toaster } from "@/components/ui/sonner";
 import { useCategories, useProducts, formatPrice, prettyCategory } from "@/lib/products";
 import { ProductGrid } from "@/components/site/ProductGrid";
@@ -124,6 +125,7 @@ function Index() {
         </Reveal>
       </section>
 
+      <HomepageBanner />
       <Marquee />
 
       {/* DROP 001 */}
