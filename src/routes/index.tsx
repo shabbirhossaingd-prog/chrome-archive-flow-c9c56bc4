@@ -1,11 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 import { Marquee } from "@/components/site/Marquee";
 import { LiquidChrome } from "@/components/site/LiquidChrome";
-import { ProductCard } from "@/components/site/ProductCard";
 import { Reveal } from "@/components/site/Reveal";
 import { Toaster } from "@/components/ui/sonner";
 import { useCategories, useProducts, formatPrice, prettyCategory } from "@/lib/products";
@@ -13,6 +11,7 @@ import { ProductGrid } from "@/components/site/ProductGrid";
 import { CategoryCard } from "@/components/site/CategoryCard";
 import { SmartImage } from "@/components/site/SmartImage";
 import { useCurrentCollection } from "@/lib/cms";
+import { useHomepageDeferredEnabled } from "@/lib/performance-hooks";
 import campaign1 from "@/assets/campaign-1.webp";
 import campaign2 from "@/assets/campaign-2.webp";
 
@@ -52,30 +51,11 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 function Index() {
-  const [catalogReady, setCatalogReady] = useState(false);
-
-  useEffect(() => {
-    let finished = false;
-    const activate = () => {
-      if (finished) return;
-      finished = true;
-      setCatalogReady(true);
-    };
-
-    const timer = window.setTimeout(activate, 850);
-    window.addEventListener("scroll", activate, { passive: true, once: true });
-    window.addEventListener("pointerdown", activate, { passive: true, once: true });
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("scroll", activate);
-      window.removeEventListener("pointerdown", activate);
-    };
-  }, []);
+  const catalogReady = useHomepageDeferredEnabled(true, 2200);
 
   const { data: products = [], isLoading } = useProducts(catalogReady);
   const { data: categories = [] } = useCategories(catalogReady);
-  const { data: currentCollection } = useCurrentCollection();
+  const { data: currentCollection } = useCurrentCollection(catalogReady);
 
   const currentProducts = currentCollection
     ? products.filter((p) => p.collection_id === currentCollection.id)
@@ -99,14 +79,14 @@ function Index() {
       <Header />
 
       {/* HERO */}
-      <section className="relative isolate flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 text-center">
+      <section className="home-hero relative isolate flex min-h-screen flex-col items-center justify-center overflow-hidden px-5 text-center">
         <LiquidChrome
-          className="left-1/2 top-1/2 h-[52rem] w-[52rem] -translate-x-1/2 -translate-y-1/2"
+          className="home-hero-chrome-primary left-1/2 top-1/2 h-[52rem] w-[52rem] -translate-x-1/2 -translate-y-1/2"
           opacity={0.3}
           blur={30}
         />
-        <LiquidChrome className="-right-32 bottom-0 h-[30rem] w-[30rem]" opacity={0.12} flip />
-        <div className="grain-overlay" />
+        <LiquidChrome className="home-hero-chrome-secondary -right-32 bottom-0 h-[30rem] w-[30rem]" opacity={0.12} flip />
+        <div className="grain-overlay home-hero-grain" />
 
         <Reveal immediate>
           <img
@@ -115,12 +95,13 @@ function Index() {
             width={720}
             height={720}
             fetchPriority="high"
+            loading="eager"
             decoding="async"
-            className="mx-auto w-[68vw] max-w-[34rem] animate-float-slow mix-blend-lighten contrast-125"
+            className="home-hero-logo mx-auto w-[68vw] max-w-[34rem] animate-float-slow mix-blend-lighten contrast-125"
           />
         </Reveal>
 
-        <Reveal delay={200} className="mt-2">
+        <Reveal delay={120} className="mt-2">
           <h1 className="chrome-text font-display text-3xl tracking-[0.3em] sm:text-5xl">
             Zzerkoff
           </h1>
@@ -132,7 +113,7 @@ function Index() {
           </p>
         </Reveal>
 
-        <Reveal delay={420} className="mt-12">
+        <Reveal delay={240} className="mt-12">
           <Link
             to="/collection"
             className="group inline-flex items-center gap-4 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-5 text-[10px] uppercase tracking-[0.45em] text-foreground backdrop-blur-md transition-all duration-700 hover:border-chrome hover:bg-white/[0.08]"
@@ -213,7 +194,6 @@ function Index() {
           </div>
         </section>
       ) : null}
-
 
       {/* SHOP BY OBJECT */}
       <section className="perf-below-fold relative px-5 py-24 sm:px-8">
