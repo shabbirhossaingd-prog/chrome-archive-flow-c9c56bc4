@@ -5,14 +5,57 @@ import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
 import { SmartImage } from "@/components/site/SmartImage";
 import { postBySlugQuery, formatDate } from "@/lib/cms";
+import { supabase } from "@/integrations/supabase/client";
+
+const SITE_URL = "https://zzerkoff.vercel.app";
 
 export const Route = createFileRoute("/blog/$slug")({
-  head: () => ({
-    meta: [
-      { title: "ZZERKOFF Journal" },
-      { name: "description", content: "ZZERKOFF journal and editorial stories." },
-    ],
-  }),
+  loader: async ({ params }) => {
+    const { data } = await (supabase as any)
+      .from("blog_posts")
+      .select(
+        "title,slug,excerpt,seo_title,seo_description,featured_image,status,published_at,created_at",
+      )
+      .eq("slug", params.slug)
+      .eq("status", "published")
+      .maybeSingle();
+
+    return data ?? null;
+  },
+  head: ({ params, loaderData }) => {
+    const post = loaderData as any;
+    const title =
+      post?.seo_title?.trim() ||
+      (post?.title ? `${post.title} — ZZERKOFF Journal` : "ZZERKOFF Journal");
+    const description =
+      post?.seo_description?.trim() ||
+      post?.excerpt?.trim() ||
+      "ZZERKOFF journal and editorial stories.";
+    const canonical = `${SITE_URL}/blog/${params.slug}`;
+    const rawImage = post?.featured_image || "";
+    const image = rawImage.startsWith("http")
+      ? rawImage
+      : rawImage.startsWith("/")
+        ? `${SITE_URL}${rawImage}`
+        : `${SITE_URL}/images/zzerkoff-logo.png`;
+
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "article" },
+        { property: "og:url", content: canonical },
+        { property: "og:image", content: image },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        { name: "twitter:image", content: image },
+      ],
+      links: [{ rel: "canonical", href: canonical }],
+    };
+  },
   component: BlogDetail,
 });
 
@@ -38,18 +81,37 @@ function BlogDetail() {
             ENTRY NOT FOUND
           </h1>
           <Link
-            to="/about"
+            to="/blog"
             className="mt-8 inline-block text-[9px] uppercase tracking-[0.35em] text-chrome"
           >
-            Back to About
+            Back to Journal
           </Link>
         </section>
       </PageShell>
     );
   }
 
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.seo_description || post.excerpt || "",
+    datePublished: post.published_at || post.created_at,
+    dateModified: post.updated_at || post.published_at || post.created_at,
+    image: post.featured_image || `${SITE_URL}/images/zzerkoff-logo.png`,
+    mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
+    author: { "@type": "Organization", name: "ZZERKOFF" },
+    publisher: { "@type": "Organization", name: "ZZERKOFF" },
+  };
+
   return (
     <PageShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(articleSchema).replace(/</g, "\\u003c"),
+        }}
+      />
       <article className="relative isolate overflow-hidden px-5 pb-32 pt-40 sm:px-8 sm:pt-52">
         <LiquidChrome
           className="left-1/2 top-16 h-[42rem] w-[42rem] -translate-x-1/2"
@@ -94,10 +156,10 @@ function BlogDetail() {
 
           <Reveal delay={220}>
             <Link
-              to="/about"
+              to="/blog"
               className="mt-16 inline-block text-[9px] uppercase tracking-[0.4em] text-chrome"
             >
-              ← Back to About
+              ← Back to Journal
             </Link>
           </Reveal>
         </div>
