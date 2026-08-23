@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function assertAdmin(context: { userId: string; supabase: any }) {
@@ -131,4 +132,112 @@ export const dispatchGrowthNotifications = createServerFn({ method: "POST" })
     }
 
     return { sent, failed };
+  });
+
+const blogGeneratorInput = z.object({
+  count: z.number().int().min(1).max(4).default(3),
+});
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+
+export const generateAiBlogDrafts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => blogGeneratorInput.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is not configured on the server.");
+
+    const { data: existing, error: existingError } = await context.supabase
+      .from("blog_posts")
+      .select("title,slug")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (existingError) throw existingError;
+
+    const existingTitles = (existing ?? []).map((row: any) => row.title).join("\n");
+    const prompt = `You are the editorial and SEO writer for ZZERKOFF, a unisex alternative accessories brand focused on chrome, vintage, gothic, underground and Y2K styling.\n\nCreate ${data.count} genuinely useful, non-duplicate blog articles. Avoid invented product facts, medical claims, fake statistics and fake trends. Focus on styling, sizing, care, accessory coordination, buying decisions, or subculture-inspired fashion education.\n\nDo not reuse or closely imitate these existing titles:\n${existingTitles || "None yet"}\n\nFor each article return: title, slug, excerpt (max 180 chars), seo_title (max 60 chars), seo_description (145-160 chars), and content_html. content_html must be clean semantic HTML using only h2, h3, p, ul, ol, li, strong, em and blockquote. Aim for 700-1100 useful words. Do not include an h1.`;
+
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: {
+                articles: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      title: { type: "string" },
+                      slug: { type: "string" },
+                      excerpt: { type: "string" },
+                      seo_title: { type: "string" },
+                      seo_description: { type: "string" },
+                      content_html: { type: "string" },
+                    },
+                    required: ["title", "slug", "excerpt", "seo_title", "seo_description", "content_html"],
+                  },
+                },
+              },
+              required: ["articles"],
+            },
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      if (response.status === 429) throw new Error("Gemini free quota is temporarily exhausted.");
+      throw new Error(`Gemini generation failed (${response.status}).`);
+    }
+
+    const body = (await response.json()) as any;
+    const raw = body?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text ?? "").join("") ?? "";
+    if (!raw) throw new Error("Gemini returned an empty response.");
+
+    const parsed = JSON.parse(raw);
+    const articles = Array.isArray(parsed?.articles) ? parsed.articles.slice(0, data.count) : [];
+    const created: Array<{ title: string; slug: string }> = [];
+    const usedSlugs = new Set((existing ?? []).map((row: any) => String(row.slug)));
+
+    for (const article of articles) {
+      const title = String(article.title || "").trim().slice(0, 180);
+      const baseSlug = slugify(String(article.slug || title));
+      if (!title || !baseSlug) continue;
+
+      let slug = baseSlug;
+      let suffix = 2;
+      while (usedSlugs.has(slug)) slug = `${baseSlug}-${suffix++}`;
+      usedSlugs.add(slug);
+
+      const { error } = await context.supabase.from("blog_posts").insert({
+        title,
+        slug,
+        excerpt: String(article.excerpt || "").trim().slice(0, 220),
+        content: String(article.content_html || "").trim().slice(0, 30000),
+        seo_title: String(article.seo_title || title).trim().slice(0, 70),
+        seo_description: String(article.seo_description || "").trim().slice(0, 180),
+        status: "draft",
+        published_at: null,
+        featured: false,
+      });
+      if (error) throw error;
+      created.push({ title, slug });
+    }
+
+    return { created };
   });
