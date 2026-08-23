@@ -21,8 +21,8 @@ export const settingsQuery = queryOptions({
 });
 
 /** Central access to the brand's business settings, with safe fallbacks. */
-export function useSite() {
-  const { data } = useQuery(settingsQuery);
+export function useSite(enabled = true) {
+  const { data } = useQuery({ ...settingsQuery, enabled });
 
   const brand = data?.brand_name || SITE.brand;
   const whatsappNumber = (data?.whatsapp_number || SITE.whatsappNumber).replace(/\D/g, "");
