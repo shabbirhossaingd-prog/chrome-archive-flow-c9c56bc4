@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminPosts, formatDate } from "@/lib/cms";
 import { SmartImage } from "@/components/site/SmartImage";
 import { AdminButton } from "@/components/admin/AdminUI";
+import { generateAiBlogDrafts } from "@/lib/growth.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/blog/")({
   component: AdminBlog,
@@ -13,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/admin/blog/")({
 function AdminBlog() {
   const { data: posts = [], isLoading } = useAdminPosts();
   const queryClient = useQueryClient();
+  const generate = useServerFn(generateAiBlogDrafts);
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
@@ -26,6 +30,15 @@ function AdminBlog() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed"),
   });
 
+  const generateDrafts = useMutation({
+    mutationFn: async (count: number) => generate({ data: { count } }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["blog"] });
+      toast.success(`${result.created.length} AI blog draft${result.created.length === 1 ? "" : "s"} created.`);
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "AI generation failed"),
+  });
+
   return (
     <div className="space-y-8 pb-20">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -35,12 +48,30 @@ function AdminBlog() {
           </span>
           <h1 className="mt-4 font-display text-xl tracking-[0.22em] text-foreground">BLOG</h1>
         </div>
-        <Link
-          to="/admin/blog/new"
-          className="rounded-xl border border-chrome/60 bg-white/[0.05] px-5 py-3 text-[9px] uppercase tracking-[0.35em] text-foreground"
-        >
-          + New post
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={generateDrafts.isPending}
+            onClick={() => generateDrafts.mutate(3)}
+            className="inline-flex items-center gap-2 rounded-xl border border-chrome/60 bg-white/[0.05] px-5 py-3 text-[9px] uppercase tracking-[0.3em] text-foreground disabled:opacity-40"
+          >
+            <Sparkles className="size-3.5" />
+            {generateDrafts.isPending ? "Generating..." : "Generate 3 AI drafts"}
+          </button>
+          <Link
+            to="/admin/blog/new"
+            className="rounded-xl border border-chrome/60 bg-white/[0.05] px-5 py-3 text-[9px] uppercase tracking-[0.35em] text-foreground"
+          >
+            + New post
+          </Link>
+        </div>
+      </div>
+
+      <div className="glass-panel rounded-[22px] p-5">
+        <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">AI EDITORIAL</span>
+        <p className="mt-3 max-w-2xl text-[10px] leading-relaxed text-muted-foreground">
+          Gemini creates SEO-ready articles as DRAFTS only. Review facts, edit wording, add a featured image, then publish manually. Existing titles are used to reduce duplicate topics.
+        </p>
       </div>
 
       {isLoading && (
@@ -53,14 +84,8 @@ function AdminBlog() {
         <div className="glass-panel rounded-[24px] p-8 text-center">
           <p className="font-display text-lg tracking-[0.2em] text-foreground">NO POSTS YET</p>
           <p className="mt-3 text-xs text-muted-foreground">
-            Create your first ZZERKOFF journal entry.
+            Create manually or generate the first AI drafts.
           </p>
-          <Link
-            to="/admin/blog/new"
-            className="mt-5 inline-block text-[9px] uppercase tracking-[0.35em] text-chrome"
-          >
-            + New post
-          </Link>
         </div>
       )}
 
