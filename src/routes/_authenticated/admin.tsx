@@ -27,6 +27,7 @@ const DESKTOP_NAV = [
   { label: "PAGES", to: "/admin/pages" as const },
   { label: "BLOG", to: "/admin/blog" as const },
   { label: "COMMERCE", to: "/admin/commerce" as const },
+  { label: "GROWTH", to: "/admin/growth" as const },
   { label: "SETTINGS", to: "/admin/settings" as const },
   { label: "ERP", to: "/erp" as const },
 ];
@@ -46,6 +47,7 @@ const MOBILE_MORE = [
   { label: "PAGES", to: "/admin/pages" as const },
   { label: "BLOG", to: "/admin/blog" as const },
   { label: "COMMERCE", to: "/admin/commerce" as const },
+  { label: "GROWTH", to: "/admin/growth" as const },
   { label: "SETTINGS", to: "/admin/settings" as const },
 ];
 
