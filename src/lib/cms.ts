@@ -79,7 +79,8 @@ export const adminCollectionsQuery = queryOptions({
   },
 });
 
-export const useCurrentCollection = () => useQuery(currentCollectionQuery);
+export const useCurrentCollection = (enabled = true) =>
+  useQuery({ ...currentCollectionQuery, enabled });
 export const useArchivedCollections = () => useQuery(archivedCollectionsQuery);
 export const usePublishedCollections = () => useQuery(publishedCollectionsQuery);
 export const useAdminCollections = () => useQuery(adminCollectionsQuery);
