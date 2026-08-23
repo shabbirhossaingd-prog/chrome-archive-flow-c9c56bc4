@@ -14,6 +14,7 @@ import { SmartImage } from "./SmartImage";
 import { matchesSearch, useProducts } from "@/lib/products";
 import { useCart, useWishlist } from "@/lib/commerce";
 import { useSite } from "@/lib/settings";
+import { useHomepageDeferredEnabled } from "@/lib/performance-hooks";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -30,8 +31,9 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [q, setQ] = useState("");
+  const homepageDataReady = useHomepageDeferredEnabled(true, 2200);
   const { data: products = [] } = useProducts(searchOpen);
-  const site = useSite();
+  const site = useSite(homepageDataReady);
   const wishlist = useWishlist();
   const cart = useCart();
 
