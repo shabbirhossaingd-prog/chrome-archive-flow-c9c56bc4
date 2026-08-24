@@ -6,14 +6,15 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const VISION_MODEL = process.env.GEMINI_PRODUCT_VISION_MODEL || "gemini-3.5-flash-lite";
 
 const PRICE_RULES = {
-  ring: { min: 299, max: 399, label: "Ring" },
-  bracelet: { min: 599, max: 699, label: "Bracelet" },
-  "wallet-chain": { min: 599, max: 899, label: "Wallet Chain" },
+  ring: { min: 299, max: 499, label: "Ring" },
+  bracelet: { min: 599, max: 899, label: "Bracelet" },
+  "wallet-chain": { min: 599, max: 999, label: "Wallet Chain" },
   glasses: { min: 999, max: 1599, label: "Glasses" },
-  chain: { min: 399, max: 499, label: "Chain / Necklace" },
-  headphone: { min: 999, max: 2999, label: "Headphone" },
+  chain: { min: 399, max: 699, label: "Chain / Necklace" },
+  headphone: { min: 1299, max: 2999, label: "Headphone / Earphone" },
   belt: { min: 1299, max: 1799, label: "Belt" },
   earring: { min: 399, max: 799, label: "Earring" },
+  watch: { min: 6999, max: 15999, label: "Watch" },
 } as const;
 
 type PriceType = keyof typeof PRICE_RULES;
@@ -56,11 +57,12 @@ const slugify = (value: string) =>
 
 function normalizeType(value: string): PriceType | "other" {
   const v = value.toLowerCase().replace(/[^a-z]+/g, " ").trim();
+  if (/watch|wristwatch|timepiece/.test(v)) return "watch";
   if (/wallet|pant chain|waist chain/.test(v)) return "wallet-chain";
   if (/bracelet|wrist/.test(v)) return "bracelet";
   if (/earring|ear ring|ear cuff/.test(v)) return "earring";
   if (/glass|eyewear|sunglass|spectacle/.test(v)) return "glasses";
-  if (/headphone|headset|earphone/.test(v)) return "headphone";
+  if (/headphone|headset|earphone|earbud/.test(v)) return "headphone";
   if (/belt/.test(v)) return "belt";
   if (/ring/.test(v)) return "ring";
   if (/necklace|chain|pendant/.test(v)) return "chain";
@@ -81,9 +83,10 @@ function matchCategory(
     "wallet-chain": ["wallet chain", "pant chain", "waist chain"],
     glasses: ["glass", "eyewear", "sunglass"],
     chain: ["chain", "necklace"],
-    headphone: ["headphone", "headset", "earphone"],
+    headphone: ["headphone", "headset", "earphone", "earbud"],
     belt: ["belt"],
     earring: ["earring", "ear ring"],
+    watch: ["watch", "watches", "timepiece"],
   };
   if (productType === "other") return "";
 
@@ -137,7 +140,7 @@ export const detectBulkProductFromImage = createServerFn({ method: "POST" })
 Analyze the supplied product photo and create ONE editable ecommerce product draft.
 
 Choose product_type from these concepts only when visually appropriate:
-ring, bracelet, wallet-chain, glasses, chain, headphone, belt, earring, other.
+ring, bracelet, wallet-chain, glasses, chain, headphone, belt, earring, watch, other.
 
 Existing website categories (return category_slug using one of these exact slugs when there is a clear match):
 ${allowedCategories || "No categories provided"}
@@ -155,14 +158,15 @@ Facts rules:
 - Copy should be premium, dark, Y2K/chrome/gothic but useful and not cheesy.
 
 Pricing rules (suggested_price MUST stay inside the matching type range):
-ring 299–399 BDT
-bracelet 599–699 BDT
-wallet-chain 599–899 BDT
+ring 299–499 BDT
+bracelet 599–899 BDT
+wallet-chain 599–999 BDT
 glasses 999–1599 BDT
-chain 399–499 BDT
-headphone 999–2999 BDT
+chain 399–699 BDT
+headphone or earphone 1299–2999 BDT
 belt 1299–1799 BDT
 earring 399–799 BDT
+watch 6999–15999 BDT
 For other, return 0.
 
 Return product_type, category_slug, confidence (0 to 1), name, suggested_price, material, finish, short_description (max 155 chars), full_description (60-110 words), tags (6-10), details_content, material_content, care, seo_title (max 60 chars), seo_description (145-160 chars), image_alt_text (max 125 chars). Filename hint only: ${data.file_name || "none"}.`;
