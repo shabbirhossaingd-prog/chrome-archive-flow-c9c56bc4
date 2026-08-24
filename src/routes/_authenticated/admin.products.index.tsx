@@ -22,6 +22,7 @@ const FILTERS = [
   "EYEWEAR",
   "IN STOCK",
   "LOW STOCK",
+  "PRE-ORDER",
   "SOLD OUT",
   "FEATURED",
   "NEW COLLECTION",
@@ -78,6 +79,7 @@ function AdminProducts() {
         filter === categoryLabel ||
         (filter === "IN STOCK" && !isSoldOut(p) && p.stock_status === "IN STOCK") ||
         (filter === "LOW STOCK" && p.stock_status === "LOW STOCK") ||
+        (filter === "PRE-ORDER" && p.stock_status === "PRE-ORDER") ||
         (filter === "SOLD OUT" && isSoldOut(p)) ||
         (filter === "FEATURED" && p.featured) ||
         (filter === "NEW COLLECTION" && p.new_collection) ||
