@@ -20,7 +20,7 @@ export const SITE = {
 export const formatPrice = (n: number | string, symbol: string = SITE.currencySymbol) =>
   `${symbol}${Number(n).toLocaleString("en-US")}`;
 
-export const STOCK_OPTIONS = ["IN STOCK", "LOW STOCK", "SOLD OUT"] as const;
+export const STOCK_OPTIONS = ["IN STOCK", "LOW STOCK", "PRE-ORDER", "SOLD OUT"] as const;
 
 export function whatsappUrl(text: string, number: string = SITE.whatsappNumber) {
   return `https://wa.me/${number.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
