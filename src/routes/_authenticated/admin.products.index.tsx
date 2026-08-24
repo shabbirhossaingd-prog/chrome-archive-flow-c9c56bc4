@@ -102,12 +102,20 @@ function AdminProducts() {
             OBJECTS
           </h1>
         </div>
-        <Link
-          to="/admin/products/new"
-          className="rounded-xl border border-chrome/60 bg-white/[0.05] px-5 py-3 text-[9px] uppercase tracking-[0.35em] text-foreground hover:bg-white/[0.1]"
-        >
-          + New object
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/admin/products/bulk"
+            className="rounded-xl border border-chrome/60 bg-white/[0.05] px-5 py-3 text-[9px] uppercase tracking-[0.32em] text-chrome hover:bg-white/[0.1]"
+          >
+            AI Bulk Import
+          </Link>
+          <Link
+            to="/admin/products/new"
+            className="rounded-xl border border-chrome/60 bg-white/[0.05] px-5 py-3 text-[9px] uppercase tracking-[0.35em] text-foreground hover:bg-white/[0.1]"
+          >
+            + New object
+          </Link>
+        </div>
       </div>
 
       <div className="glass-panel space-y-4 rounded-[22px] p-4">
