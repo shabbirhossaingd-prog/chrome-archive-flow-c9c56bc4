@@ -15,6 +15,7 @@ import { Analytics } from "@/components/site/Analytics";
 import { GrowthLayer } from "@/components/site/GrowthLayer";
 import { DeferredFonts } from "@/components/site/DeferredFonts";
 import { ProductDescriptionAccordion } from "@/components/site/ProductDescriptionAccordion";
+import { CommerceExperienceLayer } from "@/components/site/CommerceExperienceLayer";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -138,6 +139,7 @@ function RootComponent() {
       <ProductDescriptionAccordion />
       <Outlet />
       <GrowthLayer />
+      <CommerceExperienceLayer />
       <Toaster position="bottom-center" theme="dark" />
     </QueryClientProvider>
   );
