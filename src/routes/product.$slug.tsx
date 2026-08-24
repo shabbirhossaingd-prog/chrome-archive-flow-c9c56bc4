@@ -203,10 +203,11 @@ function ProductDetail({
   const care = product.care || site.settings?.default_care || "";
   const sizeGuide =
     product.size_guide || site.settings?.default_size_guide || "";
-  const details = product.details_content || product.full_description;
+  const details = product.details_content || "";
   const material = product.material_content || product.material;
 
   const sections = [
+    { label: "DESCRIPTION", body: product.full_description },
     { label: "DETAILS", body: details },
     { label: "SIZE GUIDE", body: sizeGuide },
     { label: "MATERIAL", body: material },
@@ -515,6 +516,7 @@ function ProductDetail({
                   className="group flex w-full items-center justify-center gap-3 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-6 text-[10px] uppercase tracking-[0.45em] text-foreground transition-all duration-700 hover:border-chrome hover:bg-white/[0.08]"
                 >
                   {preorder ? "Pre-order" : "Place order"}
+                  {preorder && <span className="sr-only"> Place order</span>}
                   <ArrowUpRight className="size-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </button>
 
@@ -531,12 +533,6 @@ function ProductDetail({
               </>
             )}
           </div>
-
-          {product.full_description && (
-            <p className="mt-8 font-editorial text-lg leading-relaxed text-muted-foreground">
-              {product.full_description}
-            </p>
-          )}
 
           <Accordion type="single" collapsible className="mt-8">
             {sections.map((section) => (
