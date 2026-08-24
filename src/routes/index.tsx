@@ -6,6 +6,8 @@ import { Marquee } from "@/components/site/Marquee";
 import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
 import { HomepageBanner } from "@/components/site/HomepageBanner";
+import { HomepageArchive } from "@/components/site/HomepageArchive";
+import { HomepageMerchandising } from "@/components/site/HomepageMerchandising";
 import { Toaster } from "@/components/ui/sonner";
 import { useCategories, useProducts, formatPrice, prettyCategory } from "@/lib/products";
 import { ProductGrid } from "@/components/site/ProductGrid";
@@ -13,8 +15,6 @@ import { CategoryCard } from "@/components/site/CategoryCard";
 import { SmartImage } from "@/components/site/SmartImage";
 import { useCurrentCollection } from "@/lib/cms";
 import { useHomepageDeferredEnabled } from "@/lib/performance-hooks";
-import campaign1 from "@/assets/campaign-1.webp";
-import campaign2 from "@/assets/campaign-2.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -128,7 +128,7 @@ function Index() {
       <HomepageBanner />
       <Marquee />
 
-      {/* DROP 001 */}
+      {/* CURRENT DROP */}
       <section id="drop" className="perf-below-fold relative isolate scroll-mt-28 px-5 py-28 sm:px-8 sm:py-36">
         <LiquidChrome className="-left-48 top-24 h-[34rem] w-[34rem]" opacity={0.14} />
         <div className="mx-auto max-w-7xl">
@@ -217,6 +217,8 @@ function Index() {
         </div>
       </section>
 
+      <HomepageMerchandising products={products} enabled={catalogReady} />
+
       {/* STATEMENT */}
       <section className="perf-below-fold relative isolate overflow-hidden px-5 py-36 sm:px-8 sm:py-48">
         <LiquidChrome
@@ -240,62 +242,7 @@ function Index() {
         </div>
       </section>
 
-      {/* ARCHIVE */}
-      <section id="archive" className="perf-below-fold relative scroll-mt-28 px-5 py-24 sm:px-8">
-        <div className="mx-auto max-w-7xl">
-          <Reveal className="flex items-end justify-between gap-6">
-            <h2 className="font-display text-3xl tracking-[0.2em] text-foreground sm:text-5xl">
-              THE ARCHIVE
-            </h2>
-            <SectionLabel>ZZ / VISUAL SERIES 001</SectionLabel>
-          </Reveal>
-
-          <div className="mt-14 grid gap-4 sm:gap-6 lg:grid-cols-12">
-            <Reveal className="lg:col-span-7">
-              <figure className="glass-panel relative overflow-hidden rounded-[26px]">
-                <img
-                  src={campaign1}
-                  alt="Hands wearing chrome rings, flash photography"
-                  loading="lazy"
-                  width={1200}
-                  height={1504}
-                  className="aspect-4/5 w-full object-cover grayscale"
-                />
-                <div className="grain-overlay" />
-              </figure>
-            </Reveal>
-
-            <div className="flex flex-col gap-4 sm:gap-6 lg:col-span-5">
-              <Reveal delay={140}>
-                <figure className="glass-panel relative overflow-hidden rounded-[26px]">
-                  <img
-                    src={campaign2}
-                    alt="Model in dark outfit with chrome chains"
-                    loading="lazy"
-                    width={1200}
-                    height={912}
-                    className="aspect-4/3 w-full object-cover grayscale"
-                  />
-                  <div className="grain-overlay" />
-                </figure>
-              </Reveal>
-              <Reveal delay={260}>
-                <figure className="glass-panel relative overflow-hidden rounded-[26px]">
-                  <img
-                    src={products[1]?.primary_image ?? campaign2}
-                    alt="Chrome curb chain on black"
-                    loading="lazy"
-                    width={1024}
-                    height={1280}
-                    className="aspect-square w-full object-cover grayscale"
-                  />
-                  <div className="grain-overlay" />
-                </figure>
-              </Reveal>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HomepageArchive />
 
       {/* ABOUT */}
       <section id="about" className="perf-below-fold relative isolate scroll-mt-28 px-5 py-32 sm:px-8">
