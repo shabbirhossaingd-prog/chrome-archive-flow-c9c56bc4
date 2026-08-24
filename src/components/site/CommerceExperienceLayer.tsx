@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Clock3, X } from "lucide-react";
+import { ArrowUpRight, Clock3, ShoppingBag, X } from "lucide-react";
 import { SmartImage } from "./SmartImage";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -27,13 +27,24 @@ function readRecent() {
   }
 }
 
-function focusBuyArea() {
-  if (typeof document === "undefined") return;
-  const candidates = Array.from(document.querySelectorAll<HTMLElement>("button, a"));
-  const target = candidates.find((node) =>
-    /place order|add to cart|ask about restock|pre-order/i.test(node.textContent || ""),
-  );
-  target?.scrollIntoView({ behavior: "smooth", block: "center" });
+function findStorefrontAction(pattern: RegExp) {
+  if (typeof document === "undefined") return null;
+  return Array.from(document.querySelectorAll<HTMLElement>("button, a")).find((node) => {
+    if (node.closest('[data-zzerkoff-mobile-buybar="true"]')) return false;
+    return pattern.test((node.textContent || "").trim());
+  }) ?? null;
+}
+
+function triggerProductAction(kind: "order" | "cart" | "restock") {
+  const pattern =
+    kind === "order"
+      ? /place order/i
+      : kind === "cart"
+        ? /add to cart/i
+        : /ask about restock/i;
+  const target = findStorefrontAction(pattern);
+  if (!target) return;
+  target.click();
 }
 
 export function CommerceExperienceLayer() {
@@ -156,6 +167,64 @@ export function CommerceExperienceLayer() {
     return () => observer.disconnect();
   }, [isProductPage, pathname]);
 
+  // Purchase actions should appear before long description/detail accordions.
+  // This keeps the main conversion controls close to size/finish/quantity on
+  // both desktop and mobile without duplicating product business logic.
+  useEffect(() => {
+    if (!isProductPage || typeof document === "undefined") return;
+
+    const promoteActions = () => {
+      const primaryAction = findStorefrontAction(/place order|ask about restock/i);
+      const actionBlock = primaryAction?.parentElement;
+      if (!actionBlock) return;
+
+      const descriptionToggle = document.querySelector<HTMLElement>(
+        '[data-zzerkoff-description-toggle="true"]',
+      );
+
+      if (
+        descriptionToggle &&
+        descriptionToggle.parentElement &&
+        actionBlock.parentElement === descriptionToggle.parentElement &&
+        descriptionToggle.previousElementSibling !== actionBlock
+      ) {
+        actionBlock.classList.remove("mt-10");
+        actionBlock.classList.add("mt-8", "mb-2");
+        descriptionToggle.parentElement.insertBefore(actionBlock, descriptionToggle);
+        return;
+      }
+
+      const detailsTrigger = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+        (button) => (button.textContent || "").trim().toUpperCase() === "DETAILS",
+      );
+      if (!detailsTrigger || !actionBlock.parentElement) return;
+
+      let sectionRoot: HTMLElement | null = detailsTrigger.parentElement;
+      while (sectionRoot && sectionRoot.parentElement !== actionBlock.parentElement) {
+        sectionRoot = sectionRoot.parentElement;
+      }
+
+      if (
+        sectionRoot &&
+        sectionRoot.parentElement === actionBlock.parentElement &&
+        sectionRoot.previousElementSibling !== actionBlock
+      ) {
+        actionBlock.classList.remove("mt-10");
+        actionBlock.classList.add("mt-8", "mb-2");
+        sectionRoot.parentElement.insertBefore(actionBlock, sectionRoot);
+      }
+    };
+
+    const timer = window.setTimeout(promoteActions, 0);
+    const observer = new MutationObserver(promoteActions);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [isProductPage, pathname]);
+
   const recentProducts = useMemo(
     () =>
       recentSlugs
@@ -174,24 +243,49 @@ export function CommerceExperienceLayer() {
   return (
     <>
       {product && (
-        <div className="fixed inset-x-3 bottom-3 z-[55] sm:hidden">
-          <div className="flex items-center gap-3 rounded-2xl border border-chrome/35 bg-black/90 p-3 shadow-2xl backdrop-blur-xl">
+        <div
+          data-zzerkoff-mobile-buybar="true"
+          className="fixed inset-x-3 bottom-3 z-[55] sm:hidden"
+        >
+          <div className="flex items-center gap-2 rounded-2xl border border-chrome/35 bg-black/92 p-2.5 shadow-2xl backdrop-blur-xl">
             <div className="min-w-0 flex-1 pl-1">
-              <p className="truncate text-[9px] uppercase tracking-[0.22em] text-foreground">
+              <p className="truncate text-[8px] uppercase tracking-[0.2em] text-foreground">
                 {product.name}
               </p>
-              <div className="mt-1 flex items-center gap-2 text-[8px] uppercase tracking-[0.22em]">
+              <div className="mt-1 flex items-center gap-2 text-[7px] uppercase tracking-[0.18em]">
                 <span className="text-chrome">{formatPrice(product.price)}</span>
-                <span className="text-muted-foreground">{stockLabel}</span>
+                <span className="truncate text-muted-foreground">{stockLabel}</span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={focusBuyArea}
-              className="shrink-0 rounded-xl border border-chrome/50 bg-white/[0.05] px-4 py-3 text-[8px] uppercase tracking-[0.24em] text-foreground"
-            >
-              {soldOut ? "RESTOCK" : stockLabel === "PRE-ORDER" ? "PRE-ORDER" : "BUY"}
-            </button>
+
+            {soldOut ? (
+              <button
+                type="button"
+                onClick={() => triggerProductAction("restock")}
+                className="shrink-0 rounded-xl border border-chrome/50 bg-white/[0.05] px-4 py-3 text-[7px] uppercase tracking-[0.22em] text-foreground"
+              >
+                RESTOCK
+              </button>
+            ) : (
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => triggerProductAction("order")}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-chrome/60 bg-white/[0.06] px-3 py-3 text-[7px] uppercase tracking-[0.2em] text-foreground"
+                >
+                  {stockLabel === "PRE-ORDER" ? "PRE-ORDER" : "ORDER"}
+                  <ArrowUpRight className="size-3" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Add to cart"
+                  onClick={() => triggerProductAction("cart")}
+                  className="grid size-10 place-items-center rounded-xl border border-border/60 text-muted-foreground transition-colors active:border-chrome/60 active:text-foreground"
+                >
+                  <ShoppingBag className="size-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
