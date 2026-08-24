@@ -152,8 +152,33 @@ export function useAllCategories() {
   return useQuery(allCategoriesQuery);
 }
 
+export const isPreorder = (p: Product) => p.stock_status === "PRE-ORDER";
+
 export const isSoldOut = (p: Product) =>
-  p.stock_status === "SOLD OUT" || p.quantity_available <= 0;
+  !isPreorder(p) &&
+  (p.stock_status === "SOLD OUT" || Number(p.quantity_available ?? 0) <= 0);
+
+/** Customer-facing stock wording. Never exposes exact inventory. */
+export function customerStockLabel(p: Product) {
+  if (isPreorder(p)) return "PRE-ORDER";
+  if (isSoldOut(p)) return "SOLD OUT";
+  if (p.stock_status === "LOW STOCK") return "LOW STOCK";
+  return "IN STOCK";
+}
+
+export function productBadges(p: Product) {
+  const badges: string[] = [];
+  const stock = customerStockLabel(p);
+  if (stock !== "IN STOCK") badges.push(stock);
+
+  const price = Number(p.price ?? 0);
+  const oldPrice = Number(p.old_price ?? 0);
+  if (oldPrice > price && price > 0) badges.push("SALE");
+  if (p.new_collection) badges.push("NEW");
+  if (p.featured && !badges.includes("NEW")) badges.push("FEATURED");
+
+  return badges.slice(0, 2);
+}
 
 export function productImages(p: Product) {
   return [p.primary_image, ...(p.gallery_images ?? [])].filter(Boolean);
@@ -162,7 +187,14 @@ export function productImages(p: Product) {
 export function matchesSearch(p: Product, q: string) {
   const needle = q.trim().toLowerCase().replace(/[\s/-]/g, "");
   if (!needle) return false;
-  return [p.name, p.product_code, p.category, p.collection_name, p.material]
+  return [
+    p.name,
+    p.product_code,
+    p.category,
+    p.collection_name,
+    p.material,
+    ...(p.tags ?? []),
+  ]
     .join(" ")
     .toLowerCase()
     .replace(/[\s/-]/g, "")
