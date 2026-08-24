@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAdminPosts, formatDate } from "@/lib/cms";
 import { SmartImage } from "@/components/site/SmartImage";
 import { AdminButton } from "@/components/admin/AdminUI";
-import { generateAiBlogDrafts } from "@/lib/growth.functions";
+import { generateAiBlogWithImage } from "@/lib/ai-media.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/blog/")({
   component: AdminBlog,
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/admin/blog/")({
 function AdminBlog() {
   const { data: posts = [], isLoading } = useAdminPosts();
   const queryClient = useQueryClient();
-  const generate = useServerFn(generateAiBlogDrafts);
+  const generate = useServerFn(generateAiBlogWithImage);
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
@@ -30,11 +30,11 @@ function AdminBlog() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed"),
   });
 
-  const generateDrafts = useMutation({
-    mutationFn: async (count: number) => generate({ data: { count } }),
+  const generateDraft = useMutation({
+    mutationFn: async () => generate({ data: undefined }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["blog"] });
-      toast.success(`${result.created.length} AI blog draft${result.created.length === 1 ? "" : "s"} created.`);
+      toast.success(`AI blog + SEO + featured image created: ${result.created.title}`);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "AI generation failed"),
   });
@@ -51,12 +51,12 @@ function AdminBlog() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={generateDrafts.isPending}
-            onClick={() => generateDrafts.mutate(3)}
+            disabled={generateDraft.isPending}
+            onClick={() => generateDraft.mutate()}
             className="inline-flex items-center gap-2 rounded-xl border border-chrome/60 bg-white/[0.05] px-5 py-3 text-[9px] uppercase tracking-[0.3em] text-foreground disabled:opacity-40"
           >
             <Sparkles className="size-3.5" />
-            {generateDrafts.isPending ? "Generating..." : "Generate 3 AI drafts"}
+            {generateDraft.isPending ? "Generating blog + image..." : "Generate 1 AI blog"}
           </button>
           <Link
             to="/admin/blog/new"
@@ -69,8 +69,8 @@ function AdminBlog() {
 
       <div className="glass-panel rounded-[22px] p-5">
         <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">AI EDITORIAL</span>
-        <p className="mt-3 max-w-2xl text-[10px] leading-relaxed text-muted-foreground">
-          Gemini creates SEO-ready articles as DRAFTS only. Review facts, edit wording, add a featured image, then publish manually. Existing titles are used to reduce duplicate topics.
+        <p className="mt-3 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">
+          One click creates exactly one SEO-ready DRAFT plus one matching Gemini featured image. The image prompt is locked to a clean ZZERKOFF editorial look with no logo, icon, typography, badge, watermark or UI overlay. Review the draft before publishing.
         </p>
       </div>
 
@@ -84,7 +84,7 @@ function AdminBlog() {
         <div className="glass-panel rounded-[24px] p-8 text-center">
           <p className="font-display text-lg tracking-[0.2em] text-foreground">NO POSTS YET</p>
           <p className="mt-3 text-xs text-muted-foreground">
-            Create manually or generate the first AI drafts.
+            Create manually or generate one complete AI draft with its featured image.
           </p>
         </div>
       )}
@@ -112,6 +112,7 @@ function AdminBlog() {
               <p className="mt-1 text-[8px] uppercase tracking-[0.3em] text-chrome">
                 {post.status}
                 {post.featured ? " · FEATURED" : ""}
+                {post.featured_image ? " · AI IMAGE" : ""}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
