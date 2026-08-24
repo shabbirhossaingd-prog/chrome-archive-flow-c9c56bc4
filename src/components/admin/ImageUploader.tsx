@@ -46,11 +46,6 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number) {
   });
 }
 
-/**
- * Product uploads are normalized before they ever reach Supabase Storage.
- * JPG / PNG / browser-decodable images become WebP, oversized images are
- * resized, and already-efficient WebP files are never made larger.
- */
 async function optimizeForWeb(file: File) {
   const image = await loadImage(file);
   const sourceWidth = image.naturalWidth || image.width;
@@ -60,10 +55,7 @@ async function optimizeForWeb(file: File) {
     throw new Error("The selected image has invalid dimensions.");
   }
 
-  const scale = Math.min(
-    1,
-    MAX_IMAGE_EDGE / Math.max(sourceWidth, sourceHeight),
-  );
+  const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(sourceWidth, sourceHeight));
   const width = Math.max(1, Math.round(sourceWidth * scale));
   const height = Math.max(1, Math.round(sourceHeight * scale));
 
@@ -82,8 +74,6 @@ async function optimizeForWeb(file: File) {
   for (const quality of WEBP_QUALITIES) {
     const blob = await canvasToWebp(canvas, quality);
     if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
-
-    // Keep the highest quality step once the image is already web-friendly.
     if (blob.size <= TARGET_BYTES || blob.size <= file.size * 0.65) {
       bestBlob = blob;
       break;
@@ -92,13 +82,7 @@ async function optimizeForWeb(file: File) {
 
   if (!bestBlob) throw new Error("Image optimization failed.");
 
-  // If the source is already WebP, within the dimension cap and smaller than
-  // our re-encode, keep it. It is already in the desired web format.
-  if (
-    file.type === "image/webp" &&
-    scale === 1 &&
-    file.size <= bestBlob.size
-  ) {
+  if (file.type === "image/webp" && scale === 1 && file.size <= bestBlob.size) {
     return file;
   }
 
@@ -109,14 +93,16 @@ async function optimizeForWeb(file: File) {
   });
 }
 
-async function upload(file: File) {
+export async function uploadOptimizedAdminImage(file: File) {
+  if (!file.type.startsWith("image/")) throw new Error("Only image files are allowed");
+  if (file.size > 12 * 1024 * 1024) throw new Error("Each image must be under 12MB");
+
   const optimized = await optimizeForWeb(file);
   const path = `${crypto.randomUUID()}.webp`;
 
   const { error } = await supabase.storage
     .from("product-images")
     .upload(path, optimized, {
-      // UUID paths are immutable, so browsers/CDNs can safely cache them.
       cacheControl: "31536000",
       upsert: false,
       contentType: "image/webp",
@@ -159,10 +145,7 @@ export function ImageUploader({
       let afterBytes = 0;
 
       for (const file of Array.from(files).slice(0, room)) {
-        if (!file.type.startsWith("image/")) throw new Error("Only image files are allowed");
-        if (file.size > 12 * 1024 * 1024) throw new Error("Each image must be under 12MB");
-
-        const result = await upload(file);
+        const result = await uploadOptimizedAdminImage(file);
         refs.push(result.ref);
         beforeBytes += result.before;
         afterBytes += result.after;
