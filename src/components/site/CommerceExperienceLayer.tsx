@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Clock3, X } from "lucide-react";
 import { SmartImage } from "./SmartImage";
+import { supabase } from "@/integrations/supabase/client";
 import {
   customerStockLabel,
   formatPrice,
@@ -12,6 +13,7 @@ import {
 
 const STORAGE_KEY = "zzerkoff:recently-viewed-v1";
 const MAX_RECENT = 8;
+const STORAGE_PREFIX = "storage:";
 
 function readRecent() {
   if (typeof window === "undefined") return [] as string[];
@@ -67,6 +69,67 @@ export function CommerceExperienceLayer() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setRecentSlugs(next);
   }, [product?.id]);
+
+  // Some older storefront sections still use a raw <img> with the storage:
+  // reference created by the admin uploader. Resolve those refs centrally so
+  // they never render as a broken image while those sections are migrated to
+  // SmartImage.
+  useEffect(() => {
+    if (privateScreen || typeof document === "undefined") return;
+
+    let cancelled = false;
+
+    const repairImage = async (img: HTMLImageElement) => {
+      const src = img.getAttribute("src") || "";
+      if (!src.startsWith(STORAGE_PREFIX) || img.dataset.zzStorageRepair === "pending") return;
+
+      img.dataset.zzStorageRepair = "pending";
+      img.style.visibility = "hidden";
+      const path = src.slice(STORAGE_PREFIX.length);
+
+      try {
+        const { data, error } = await supabase.storage
+          .from("product-images")
+          .createSignedUrl(path, 60 * 60);
+
+        if (cancelled) return;
+        if (error || !data?.signedUrl) {
+          img.dataset.zzStorageRepair = "failed";
+          img.style.visibility = "visible";
+          return;
+        }
+
+        img.src = data.signedUrl;
+        img.dataset.zzStorageRepair = "done";
+        img.style.visibility = "visible";
+      } catch {
+        if (!cancelled) {
+          img.dataset.zzStorageRepair = "failed";
+          img.style.visibility = "visible";
+        }
+      }
+    };
+
+    const scan = () => {
+      document
+        .querySelectorAll<HTMLImageElement>('img[src^="storage:"]')
+        .forEach((img) => void repairImage(img));
+    };
+
+    scan();
+    const observer = new MutationObserver(scan);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["src"],
+    });
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [pathname, privateScreen]);
 
   // Public UI must never reveal exact inventory numbers. Keep inventory for
   // purchase validation, but remove legacy count labels from the rendered UI.
