@@ -18,7 +18,6 @@ import {
   formatPrice,
   isSoldOut,
   productImages,
-  useProductBySlug,
   useProducts,
   type Product,
 } from "@/lib/products";
@@ -32,14 +31,17 @@ const pretty = (slug: string) => slug.replace(/-/g, " ").toUpperCase();
 
 export const Route = createFileRoute("/product/$slug")({
   loader: async ({ params }) => {
-    const { data } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from("products")
-      .select(
-        "name,slug,seo_title,seo_description,image_alt_text,primary_image,short_description,full_description",
-      )
+      .select("*")
       .eq("slug", params.slug)
       .eq("published", true)
       .maybeSingle();
+
+    if (error) {
+      console.error("[product] could not load product", error);
+      return null;
+    }
 
     return data ?? null;
   },
@@ -57,12 +59,11 @@ export const Route = createFileRoute("/product/$slug")({
       `${pretty(params.slug)} — a ZZERKOFF object for the afterdark.`;
     const canonical = `https://zzerkoff.vercel.app/product/${params.slug}`;
     const rawImage = seoProduct?.primary_image || "";
-    const image =
-      rawImage.startsWith("http")
-        ? rawImage
-        : rawImage.startsWith("/")
-? `https://zzerkoff.vercel.app${rawImage}`
-: "https://zzerkoff.vercel.app/images/zzerkoff-logo.png";
+    const image = rawImage.startsWith("http")
+      ? rawImage
+      : rawImage.startsWith("/")
+        ? `https://zzerkoff.vercel.app${rawImage}`
+        : "https://zzerkoff.vercel.app/images/zzerkoff-logo.png";
 
     return {
       meta: [
@@ -85,8 +86,7 @@ export const Route = createFileRoute("/product/$slug")({
 });
 
 function ProductPage() {
-  const { slug } = Route.useParams();
-  const { data: product, isLoading } = useProductBySlug(slug);
+  const product = Route.useLoaderData() as Product | null;
   const { data: products = [] } = useProducts();
 
   return (
@@ -99,11 +99,7 @@ function ProductPage() {
           ← Back to shop
         </Link>
 
-        {isLoading && (
-          <div className="glass-panel mt-10 h-[60vh] animate-pulse rounded-[28px] bg-white/[0.02]" />
-        )}
-
-        {!isLoading && !product && (
+        {!product && (
           <p className="py-32 text-center text-[10px] uppercase tracking-[0.4em] text-muted-foreground">
             This object is no longer available.
           </p>
@@ -129,9 +125,10 @@ function ProductDetail({
   const finishes = product.finish ?? [];
   const colors = (productAny.colors ?? []) as string[];
   const colorStock = (productAny.color_stock ?? {}) as Record<string, number>;
+  const preorder = product.stock_status === "PRE-ORDER";
 
   const firstAvailableColor =
-    colors.find((color) => Number(colorStock[color] ?? 0) > 0) ??
+    colors.find((value) => preorder || Number(colorStock[value] ?? 0) > 0) ??
     colors[0] ??
     "";
 
@@ -150,18 +147,23 @@ function ProductDetail({
 
   const aggregateSoldOut = isSoldOut(product);
   const colorAvailable =
-    colors.length > 0 ? Number(colorStock[color] ?? 0) : product.quantity_available;
+    colors.length > 0 ? Number(colorStock[color] ?? 0) : Number(product.quantity_available ?? 0);
   const maxAvailable = Math.max(
     0,
-    Math.min(product.quantity_available, colorAvailable),
+    Math.min(Number(product.quantity_available ?? 0), colorAvailable),
   );
-  const soldOut = aggregateSoldOut || (colors.length > 0 && maxAvailable <= 0);
+  const soldOut = aggregateSoldOut || (!preorder && colors.length > 0 && maxAvailable <= 0);
 
   useEffect(() => {
+    if (preorder) {
+      setQty((current) => Math.max(1, current));
+      return;
+    }
+
     setQty((current) =>
       maxAvailable > 0 ? Math.max(1, Math.min(current, maxAvailable)) : 1,
     );
-  }, [maxAvailable]);
+  }, [maxAvailable, preorder]);
 
   const productUrl = `https://zzerkoff.vercel.app/product/${product.slug}`;
   const schemaImage =
@@ -187,9 +189,11 @@ function ProductDetail({
       "@type": "Offer",
       priceCurrency: site.currencyCode,
       price: Number(product.price),
-      availability: soldOut
-        ? "https://schema.org/OutOfStock"
-        : "https://schema.org/InStock",
+      availability: preorder
+        ? "https://schema.org/PreOrder"
+        : soldOut
+          ? "https://schema.org/OutOfStock"
+          : "https://schema.org/InStock",
       url: productUrl,
     },
   };
@@ -273,7 +277,7 @@ function ProductDetail({
       color,
     });
 
-    toast.success("Added to Cart. Checkout will activate later.");
+    toast.success(preorder ? "Pre-order added to cart." : "Added to cart.");
   };
 
   return (
@@ -285,17 +289,18 @@ function ProductDetail({
         }}
       />
 
-      <div className="relative mt-10 grid gap-12 pb-24 lg:grid-cols-[58fr_42fr] lg:gap-16">
+      <div className="relative mt-10 grid gap-12 pb-24 md:grid-cols-[58fr_42fr] md:gap-10 lg:gap-16">
         <LiquidChrome
           className="-left-40 top-20 h-[38rem] w-[38rem]"
           opacity={0.16}
         />
 
-        <Reveal className="space-y-4">
+        <Reveal immediate className="space-y-4">
           <div className="glass-panel relative overflow-hidden rounded-[28px]">
             <SmartImage
-              src={images[0]}              alt={productAny.image_alt_text || product.name}
-    width={1024}
+              src={images[0]}
+              alt={productAny.image_alt_text || product.name}
+              width={1024}
               height={1280}
               eager
               className="aspect-4/5 w-full object-cover grayscale"
@@ -322,8 +327,9 @@ function ProductDetail({
                   className="glass-panel overflow-hidden rounded-[22px]"
                 >
                   <SmartImage
-                    src={src}                    alt={`${productAny.image_alt_text || product.name} — view ${index + 2}`}
-          width={1024}
+                    src={src}
+                    alt={`${productAny.image_alt_text || product.name} — view ${index + 2}`}
+                    width={1024}
                     height={1024}
                     className="aspect-square w-full object-cover grayscale"
                   />
@@ -333,7 +339,7 @@ function ProductDetail({
           )}
         </Reveal>
 
-        <Reveal delay={120} className="lg:sticky lg:top-32 lg:self-start">
+        <Reveal immediate className="md:sticky md:top-28 md:self-start">
           <span className="text-[10px] uppercase tracking-[0.45em] text-muted-foreground">
             {product.product_code}
           </span>
@@ -352,7 +358,7 @@ function ProductDetail({
           </p>
 
           <div className="mt-8 space-y-2 border-y border-border/60 py-6">
-            {product.short_description
+            {(product.short_description || "")
               .split(/[.\n]/)
               .filter(Boolean)
               .map((line) => (
@@ -371,7 +377,7 @@ function ProductDetail({
             )}
 
             <p className="pt-2 text-[10px] uppercase tracking-[0.35em] text-chrome">
-              {soldOut ? "SOLD OUT" : product.stock_status}
+              {soldOut ? "SOLD OUT" : preorder ? "PRE-ORDER" : product.stock_status}
             </p>
           </div>
 
@@ -383,19 +389,19 @@ function ProductDetail({
               <div className="flex flex-wrap gap-2">
                 {colors.map((value) => {
                   const available = Number(colorStock[value] ?? 0);
+                  const disabled = !preorder && available <= 0;
                   return (
                     <button
                       key={value}
                       type="button"
-                      disabled={available <= 0}
+                      disabled={disabled}
                       onClick={() => {
                         setColor(value);
                         setQty(1);
                       }}
-                      className={pill(color === value, available <= 0)}
+                      className={pill(color === value, disabled)}
                     >
                       {value}
-                      <span className="ml-2 opacity-55">{available}</span>
                     </button>
                   );
                 })}
@@ -467,48 +473,24 @@ function ProductDetail({
               <button
                 type="button"
                 aria-label="Increase quantity"
-                disabled={soldOut || qty >= maxAvailable}
+                disabled={soldOut || (!preorder && qty >= maxAvailable)}
                 onClick={() =>
                   setQty((value) =>
-                    maxAvailable > 0
-                      ? Math.min(maxAvailable, value + 1)
-                      : value,
+                    preorder
+                      ? value + 1
+                      : maxAvailable > 0
+                        ? Math.min(maxAvailable, value + 1)
+                        : value,
                   )
                 }
                 className="grid size-10 place-items-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:text-foreground disabled:opacity-30"
               >
                 +
               </button>
-              {!soldOut && (
-                <span className="text-[8px] uppercase tracking-[0.24em] text-muted-foreground">
-                  {maxAvailable} available
-                </span>
-              )}
             </div>
           </div>
 
-          <p className="mt-8 font-editorial text-lg leading-relaxed text-muted-foreground">
-            {product.full_description}
-          </p>
-
-          <Accordion type="single" collapsible className="mt-8">
-            {sections.map((section) => (
-              <AccordionItem
-                key={section.label}
-                value={section.label}
-                className="border-border/60"
-              >
-                <AccordionTrigger className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground hover:text-foreground hover:no-underline">
-                  {section.label}
-                </AccordionTrigger>
-                <AccordionContent className="whitespace-pre-line text-xs leading-relaxed tracking-[0.1em] text-muted-foreground">
-                  {section.body}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-
-          <div className="mt-10 space-y-3">
+          <div className="mt-8 space-y-3">
             {soldOut ? (
               <>
                 <div className="w-full rounded-full border border-border/60 px-8 py-5 text-center text-[10px] uppercase tracking-[0.45em] text-muted-foreground">
@@ -532,7 +514,7 @@ function ProductDetail({
                   onClick={() => setOrderOpen(true)}
                   className="group flex w-full items-center justify-center gap-3 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-6 text-[10px] uppercase tracking-[0.45em] text-foreground transition-all duration-700 hover:border-chrome hover:bg-white/[0.08]"
                 >
-                  Place order
+                  {preorder ? "Pre-order" : "Place order"}
                   <ArrowUpRight className="size-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </button>
 
@@ -542,13 +524,36 @@ function ProductDetail({
                   className="flex w-full items-center justify-center gap-3 rounded-full border border-border/60 px-8 py-5 text-[9px] uppercase tracking-[0.36em] text-muted-foreground transition-colors hover:border-chrome/50 hover:text-foreground"
                 >
                   <ShoppingBag className="size-4" />
-                  Add to cart / future checkout
+                  Add to cart
                 </button>
 
                 <WishlistButton productId={product.id} label className="w-full" />
               </>
             )}
           </div>
+
+          {product.full_description && (
+            <p className="mt-8 font-editorial text-lg leading-relaxed text-muted-foreground">
+              {product.full_description}
+            </p>
+          )}
+
+          <Accordion type="single" collapsible className="mt-8">
+            {sections.map((section) => (
+              <AccordionItem
+                key={section.label}
+                value={section.label}
+                className="border-border/60"
+              >
+                <AccordionTrigger className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground hover:text-foreground hover:no-underline">
+                  {section.label}
+                </AccordionTrigger>
+                <AccordionContent className="whitespace-pre-line text-xs leading-relaxed tracking-[0.1em] text-muted-foreground">
+                  {section.body}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </Reveal>
       </div>
 
