@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { ProductCard } from "./ProductCard";
 import { Reveal } from "./Reveal";
@@ -64,13 +63,13 @@ export function HomepageMerchandising({
                 </div>
 
                 {section.button_label && (
-                  <Link
-                    to={section.button_href || "/shop"}
+                  <a
+                    href={section.button_href || "/shop"}
                     className="inline-flex shrink-0 items-center gap-3 text-[9px] uppercase tracking-[0.32em] text-chrome transition-colors hover:text-foreground"
                   >
                     {section.button_label}
                     <ArrowUpRight className="size-3.5" />
-                  </Link>
+                  </a>
                 )}
               </Reveal>
 
