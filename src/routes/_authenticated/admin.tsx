@@ -21,6 +21,7 @@ const DESKTOP_NAV = [
   { label: "AI STUDIO", to: "/admin/ai" as const },
   { label: "ORDERS", to: "/admin/orders" as const },
   { label: "OBJECTS", to: "/admin/products" as const },
+  { label: "BULK IMPORT", to: "/admin/products/bulk" as const },
   { label: "CATEGORIES", to: "/admin/categories" as const },
   { label: "NEW OBJECT", to: "/admin/products/new" as const },
   { label: "COLLECTIONS", to: "/admin/collections" as const },
@@ -44,6 +45,7 @@ const MOBILE_MAIN = [
 ];
 
 const MOBILE_MORE = [
+  { label: "BULK IMPORT", to: "/admin/products/bulk" as const },
   { label: "NEW OBJECT", to: "/admin/products/new" as const },
   { label: "CATEGORIES", to: "/admin/categories" as const },
   { label: "COLLECTIONS", to: "/admin/collections" as const },
