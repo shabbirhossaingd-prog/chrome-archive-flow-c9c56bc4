@@ -245,14 +245,14 @@ export function ProductForm({ product }: { product?: Product }) {
     try {
       const result = await generateCopy({
         data: {
-name: d.name,
-category: d.category,
-material: d.material,
-finish: d.finish,
-fit_gender: d.fit_gender,
-sizes: d.sizes,
-size_description: d.size_description,
-existing_description: d.full_description,
+          name: d.name,
+          category: d.category,
+          material: d.material,
+          finish: d.finish,
+          fit_gender: d.fit_gender,
+          sizes: d.sizes,
+          size_description: d.size_description,
+          existing_description: d.full_description,
         },
       });
 
@@ -285,14 +285,19 @@ existing_description: d.full_description,
     mutationFn: async ({ publish }: { publish: boolean }) => {
       if (!validate(publish)) {
         throw new Error(
-publish
-  ? "Complete the highlighted required fields before publishing."
-  : "Product name and category are required to save a draft.",
+          publish
+            ? "Complete the highlighted required fields before publishing."
+            : "Product name and category are required to save a draft.",
         );
       }
 
       const qty = Math.max(0, Number(d.quantity_available || 0));
-      const status = qty <= 0 ? "SOLD OUT" : d.stock_status;
+      const status =
+        d.stock_status === "PRE-ORDER"
+          ? "PRE-ORDER"
+          : qty <= 0
+            ? "SOLD OUT"
+            : d.stock_status;
       const slug = await uniqueSlug(d.slug.trim() || d.name, product?.id);
 
       const payload = {
@@ -401,50 +406,53 @@ publish
             </p>
           </div>
         </div>
-      </div>      <section className="glass-panel space-y-5 rounded-[24px] p-6">
+      </div>
+
+      <section className="glass-panel space-y-5 rounded-[24px] p-6">
         <div>
-<h2 className="font-display text-sm tracking-[0.22em] text-foreground">
-  AI CONTENT + SEO
-</h2>
-<p className="mt-3 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">
-  Generate product copy and SEO from the facts you entered. AI never publishes automatically.
-  Review every generated field and edit anything you want.
-</p>
+          <h2 className="font-display text-sm tracking-[0.22em] text-foreground">
+            AI CONTENT + SEO
+          </h2>
+          <p className="mt-3 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">
+            Generate product copy and SEO from the facts you entered. AI never publishes automatically.
+            Review every generated field and edit anything you want.
+          </p>
         </div>
         <AdminButton
-tone="primary"
-disabled={aiBusy}
-onClick={() => void generateWithAi()}
+          tone="primary"
+          disabled={aiBusy}
+          onClick={() => void generateWithAi()}
         >
-{aiBusy ? "Generating…" : "Generate with Gemini AI"}
+          {aiBusy ? "Generating…" : "Generate with Gemini AI"}
         </AdminButton>
       </section>
 
       {Object.keys(validationErrors).length > 0 && (
         <section className="rounded-[22px] border border-red-500/45 bg-red-500/[0.06] p-5">
-<p className="text-[9px] uppercase tracking-[0.32em] text-red-300">
-  Required information missing
-</p>
-<ul className="mt-3 space-y-1 text-[10px] leading-relaxed text-red-200/90">
-  {Object.values(validationErrors).map((message) => (
-    <li key={message}>• {message}</li>
-  ))}
-</ul>
+          <p className="text-[9px] uppercase tracking-[0.32em] text-red-300">
+            Required information missing
+          </p>
+          <ul className="mt-3 space-y-1 text-[10px] leading-relaxed text-red-200/90">
+            {Object.values(validationErrors).map((message) => (
+              <li key={message}>• {message}</li>
+            ))}
+          </ul>
         </section>
       )}
 
       <section className="glass-panel space-y-6 rounded-[24px] p-6">
         <h2 className="font-display text-sm tracking-[0.22em] text-foreground">
-BASIC INFORMATION
+          BASIC INFORMATION
         </h2>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Product name *">
             <input
               className={fieldClass("name")}
-              value={d.name}              onChange={(e) => {
-      const name = e.target.value;
-      clearFieldError("name");
-      setDirty(true);
+              value={d.name}
+              onChange={(e) => {
+                const name = e.target.value;
+                clearFieldError("name");
+                setDirty(true);
                 setD((prev) => ({
                   ...prev,
                   name,
@@ -609,9 +617,14 @@ BASIC INFORMATION
       </section>
 
       <section className="glass-panel space-y-6 rounded-[24px] p-6">
-        <h2 className="font-display text-sm tracking-[0.22em] text-foreground">STOCK</h2>
+        <div>
+          <h2 className="font-display text-sm tracking-[0.22em] text-foreground">STOCK</h2>
+          <p className="mt-2 text-[9px] leading-relaxed tracking-[0.14em] text-muted-foreground">
+            Exact quantity is visible only in Studio. Customers only see IN STOCK, LOW STOCK, PRE-ORDER or SOLD OUT.
+          </p>
+        </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Quantity available *">
+          <Field label="Admin quantity *">
             <input
               className={fieldClass("quantity_available")}
               type="number"
@@ -619,27 +632,52 @@ BASIC INFORMATION
               value={d.quantity_available}
               onChange={(e) => {
                 const value = e.target.value;
+                clearFieldError("quantity_available");
                 setDirty(true);
-                setD((prev) => ({
-                  ...prev,
-                  quantity_available: value,
-                  stock_status: Number(value || 0) <= 0 ? "SOLD OUT" : prev.stock_status,
-                }));
+                setD((prev) => {
+                  const quantity = Number(value || 0);
+                  let stockStatus = prev.stock_status;
+                  if (prev.stock_status !== "PRE-ORDER") {
+                    if (quantity <= 0) stockStatus = "SOLD OUT";
+                    else if (prev.stock_status === "SOLD OUT") stockStatus = "IN STOCK";
+                  }
+                  return {
+                    ...prev,
+                    quantity_available: value,
+                    stock_status: stockStatus,
+                  };
+                });
               }}
             />
+            {errorText("quantity_available")}
+            <p className="mt-2 text-[8px] uppercase tracking-[0.24em] text-muted-foreground">
+              0 automatically becomes SOLD OUT unless PRE-ORDER is selected.
+            </p>
           </Field>
-          <Field label="Stock status">
-            <select
-              className={adminField}
-              value={d.stock_status}
-              onChange={(e) => set("stock_status", e.target.value)}
-            >
-              {STOCK_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+
+          <Field label="Customer stock status">
+            <div className="grid grid-cols-2 gap-2">
+              {STOCK_OPTIONS.map((status) => {
+                const active = d.stock_status === status;
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => set("stock_status", status)}
+                    className={`rounded-xl border px-3 py-3 text-[8px] uppercase tracking-[0.22em] transition-colors ${
+                      active
+                        ? "border-chrome/70 bg-white/[0.06] text-foreground"
+                        : "border-border/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[8px] uppercase tracking-[0.24em] text-muted-foreground">
+              PRE-ORDER may stay active at quantity 0. Other statuses auto switch to SOLD OUT at 0.
+            </p>
           </Field>
         </div>
       </section>
@@ -686,55 +724,56 @@ BASIC INFORMATION
 
       <section className="glass-panel space-y-6 rounded-[24px] p-6">
         <div>
-<h2 className="font-display text-sm tracking-[0.22em] text-foreground">
-  SEARCH / SEO
-</h2>
-<p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
-  Gemini can fill these fields, but they remain fully editable. These values are used on the public product page.
-</p>
+          <h2 className="font-display text-sm tracking-[0.22em] text-foreground">
+            SEARCH / SEO
+          </h2>
+          <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
+            Gemini can fill these fields, but they remain fully editable. These values are used on the public product page.
+          </p>
         </div>
 
         <Field label="SEO title *">
-<input
-  className={fieldClass("seo_title")}
-  value={d.seo_title}
-  maxLength={70}
-  onChange={(e) => set("seo_title", e.target.value)}
-  placeholder="Product search title"
-/>
-{errorText("seo_title")}
+          <input
+            className={fieldClass("seo_title")}
+            value={d.seo_title}
+            maxLength={70}
+            onChange={(e) => set("seo_title", e.target.value)}
+            placeholder="Product search title"
+          />
+          {errorText("seo_title")}
         </Field>
 
         <Field label="Meta description *">
-<textarea
-  className={fieldClass("seo_description")}
-  rows={3}
-  value={d.seo_description}
-  maxLength={170}
-  onChange={(e) => set("seo_description", e.target.value)}
-  placeholder="Search result description"
-/>
-{errorText("seo_description")}
+          <textarea
+            className={fieldClass("seo_description")}
+            rows={3}
+            value={d.seo_description}
+            maxLength={170}
+            onChange={(e) => set("seo_description", e.target.value)}
+            placeholder="Search result description"
+          />
+          {errorText("seo_description")}
         </Field>
 
         <Field label="Main image ALT text *">
-<input
-  className={fieldClass("image_alt_text")}
-  value={d.image_alt_text}
-  maxLength={140}
-  onChange={(e) => set("image_alt_text", e.target.value)}
-  placeholder="Accessible description of the main product image"
-/>
-{errorText("image_alt_text")}
+          <input
+            className={fieldClass("image_alt_text")}
+            value={d.image_alt_text}
+            maxLength={140}
+            onChange={(e) => set("image_alt_text", e.target.value)}
+            placeholder="Accessible description of the main product image"
+          />
+          {errorText("image_alt_text")}
         </Field>
       </section>
 
       <section className="glass-panel space-y-7 rounded-[24px] p-6">
-        <h2 className="font-display text-sm tracking-[0.22em] text-foreground">IMAGES</h2>        <ImageUploader
-label="Main image *"
-max={1}
-value={d.primary_image ? [d.primary_image] : []}
-onChange={(next) => set("primary_image", next[0] ?? "")}
+        <h2 className="font-display text-sm tracking-[0.22em] text-foreground">IMAGES</h2>
+        <ImageUploader
+          label="Main image *"
+          max={1}
+          value={d.primary_image ? [d.primary_image] : []}
+          onChange={(next) => set("primary_image", next[0] ?? "")}
         />
         {errorText("primary_image")}
         <ImageUploader
