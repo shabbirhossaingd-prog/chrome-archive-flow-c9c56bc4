@@ -6,6 +6,7 @@ import {
   customerStockLabel,
   formatPrice,
   isSoldOut,
+  type Product,
   useProducts,
 } from "@/lib/products";
 
@@ -35,21 +36,27 @@ function focusBuyArea() {
 
 export function CommerceExperienceLayer() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const privateScreen = pathname.startsWith("/admin") || pathname.startsWith("/erp");
   const productSlug = pathname.startsWith("/product/")
     ? decodeURIComponent(pathname.slice("/product/".length).split("/")[0] || "")
     : "";
-  const isProductPage = !!productSlug;
+  const isProductPage = !!productSlug && !privateScreen;
   const [recentOpen, setRecentOpen] = useState(false);
   const [recentSlugs, setRecentSlugs] = useState<string[]>([]);
-  const { data: products = [] } = useProducts(isProductPage || recentOpen);
+  const { data: products = [] } = useProducts(isProductPage || (recentOpen && !privateScreen));
 
   const product = isProductPage
     ? products.find((row) => row.slug === productSlug) ?? null
     : null;
 
   useEffect(() => {
+    if (privateScreen) {
+      setRecentOpen(false);
+      setRecentSlugs([]);
+      return;
+    }
     setRecentSlugs(readRecent());
-  }, [pathname]);
+  }, [pathname, privateScreen]);
 
   useEffect(() => {
     if (!product) return;
@@ -91,13 +98,15 @@ export function CommerceExperienceLayer() {
       recentSlugs
         .filter((slug) => slug !== productSlug)
         .map((slug) => products.find((row) => row.slug === slug))
-        .filter((row): row is NonNullable<typeof row> => !!row)
+        .filter((row): row is Product => !!row)
         .slice(0, 4),
     [productSlug, products, recentSlugs],
   );
 
   const stockLabel = product ? customerStockLabel(product) : "";
   const soldOut = product ? isSoldOut(product) : false;
+
+  if (privateScreen) return null;
 
   return (
     <>
