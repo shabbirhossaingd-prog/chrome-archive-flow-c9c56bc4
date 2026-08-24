@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { Buffer } from "node:buffer";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { buildBlogImageFallbackPrompt } from "@/lib/blog-image-prompt";
 
 const TEXT_MODEL = "gemini-3.5-flash-lite";
 const DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image";
@@ -100,6 +101,13 @@ async function generateStoredImage(args: {
   );
 
   if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("[ai-image] Gemini request failed", {
+      status: response.status,
+      model,
+      purpose: args.purpose,
+      response: errorText.slice(0, 1200),
+    });
     if (response.status === 429) throw new Error("Gemini image quota is temporarily exhausted.");
     throw new Error(`Gemini image generation failed (${response.status}).`);
   }
@@ -185,20 +193,31 @@ image_prompt must describe one clean 4:3 fashion-editorial featured image that v
     let suffix = 2;
     while (usedSlugs.has(slug)) slug = `${baseSlug}-${suffix++}`;
 
-    const featuredImage = await generateStoredImage({
-      apiKey,
-      supabase: context.supabase,
-      prompt: String(article.image_prompt || `${title} editorial fashion still`),
-      aspectRatio: "4:3",
-      purpose: "blog",
-    });
+    const excerpt = String(article.excerpt || "").trim().slice(0, 220);
+    const generatedPrompt = String(article.image_prompt || "").trim();
+    const imagePrompt = generatedPrompt || buildBlogImageFallbackPrompt({ title, excerpt });
+
+    let featuredImage = "";
+    let imageError = "";
+    try {
+      featuredImage = await generateStoredImage({
+        apiKey,
+        supabase: context.supabase,
+        prompt: imagePrompt,
+        aspectRatio: "4:3",
+        purpose: "blog",
+      });
+    } catch (error) {
+      imageError = error instanceof Error ? error.message : "Image generation failed.";
+      console.error("[ai-blog] Saving draft without generated image", imageError);
+    }
 
     const { data: inserted, error } = await context.supabase
       .from("blog_posts")
       .insert({
         title,
         slug,
-        excerpt: String(article.excerpt || "").trim().slice(0, 220),
+        excerpt,
         content: String(article.content_html || "").trim().slice(0, 30000),
         seo_title: String(article.seo_title || title).trim().slice(0, 70),
         seo_description: String(article.seo_description || "").trim().slice(0, 180),
@@ -207,11 +226,59 @@ image_prompt must describe one clean 4:3 fashion-editorial featured image that v
         published_at: null,
         featured: false,
       })
-      .select("id,title,slug,featured_image")
+      .select("id,title,slug,excerpt,featured_image")
       .single();
     if (error) throw error;
 
-    return { created: inserted };
+    return {
+      created: inserted,
+      imageGenerated: Boolean(featuredImage),
+      imagePrompt: buildBlogImageFallbackPrompt({ title, excerpt }),
+      imageError,
+    };
+  });
+
+const retryBlogImageInput = z.object({
+  post_id: z.string().uuid(),
+});
+
+export const retryAiBlogImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => retryBlogImageInput.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is not configured on the server.");
+
+    const { data: post, error: postError } = await context.supabase
+      .from("blog_posts")
+      .select("id,title,excerpt")
+      .eq("id", data.post_id)
+      .single();
+    if (postError) throw postError;
+
+    const imagePrompt = buildBlogImageFallbackPrompt({
+      title: String(post.title || "ZZERKOFF journal editorial"),
+      excerpt: String(post.excerpt || ""),
+    });
+
+    const featuredImage = await generateStoredImage({
+      apiKey,
+      supabase: context.supabase,
+      prompt: imagePrompt,
+      aspectRatio: "4:3",
+      purpose: "blog",
+    });
+
+    const { data: updated, error } = await context.supabase
+      .from("blog_posts")
+      .update({ featured_image: featuredImage })
+      .eq("id", data.post_id)
+      .select("id,title,featured_image")
+      .single();
+    if (error) throw error;
+
+    return { updated, imagePrompt };
   });
 
 const bannerInput = z.object({
