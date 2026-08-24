@@ -18,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 const DESKTOP_NAV = [
   { label: "DASHBOARD", to: "/admin" as const },
+  { label: "AI STUDIO", to: "/admin/ai" as const },
   { label: "ORDERS", to: "/admin/orders" as const },
   { label: "OBJECTS", to: "/admin/products" as const },
   { label: "CATEGORIES", to: "/admin/categories" as const },
@@ -36,6 +37,7 @@ const DESKTOP_NAV = [
 
 const MOBILE_MAIN = [
   { label: "DASHBOARD", to: "/admin" as const },
+  { label: "AI STUDIO", to: "/admin/ai" as const },
   { label: "ORDERS", to: "/admin/orders" as const },
   { label: "OBJECTS", to: "/admin/products" as const },
   { label: "ERP", to: "/erp" as const },
