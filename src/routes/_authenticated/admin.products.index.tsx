@@ -20,6 +20,8 @@ const FILTERS = [
   "PANT CHAINS",
   "EARRINGS",
   "EYEWEAR",
+  "WATCH",
+  "WATCHES",
   "IN STOCK",
   "LOW STOCK",
   "PRE-ORDER",
