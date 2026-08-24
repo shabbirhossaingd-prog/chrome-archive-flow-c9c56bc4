@@ -52,14 +52,15 @@ const STOCKS: StockStatus[] = ["IN STOCK", "LOW STOCK", "PRE-ORDER", "SOLD OUT"]
 const MAX_FILES = 60;
 
 const PRICE_RULE_COPY = [
-  "Ring ৳299–399",
-  "Bracelet ৳599–699",
-  "Wallet Chain ৳599–899",
+  "Ring ৳299–499",
+  "Bracelet ৳599–899",
+  "Wallet Chain ৳599–999",
   "Glasses ৳999–1599",
-  "Chain ৳399–499",
-  "Headphone ৳999–2999",
+  "Chain / Necklace ৳399–699",
+  "Headphone / Earphone ৳1299–2999",
   "Belt ৳1299–1799",
   "Earring ৳399–799",
+  "Watch ৳6999–15999",
 ];
 
 const makeRow = (fileName: string, image: string): BulkRow => ({
