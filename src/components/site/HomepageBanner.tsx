@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { SmartImage } from "./SmartImage";
+import { HomepageMerchandising } from "./HomepageMerchandising";
 import { useHomepageBanners, type HomepageBanner } from "@/lib/banners";
 import { useHomepageDeferredEnabled } from "@/lib/performance-hooks";
+import { useProducts } from "@/lib/products";
 
 const overlayClass: Record<HomepageBanner["overlay_strength"], string> = {
   none: "bg-transparent",
@@ -180,15 +182,20 @@ function BannerVisual({ banner }: { banner: HomepageBanner }) {
 export function HomepageBanner() {
   const ready = useHomepageDeferredEnabled(true, 1400);
   const { data: banners = [] } = useHomepageBanners(ready);
+  const { data: products = [] } = useProducts(ready);
   const banner = banners[0];
 
-  if (!banner || !banner.image_url) return null;
-
   return (
-    <section className="relative px-4 py-5 sm:px-8 sm:py-8" aria-label="Current promotion">
-      <div className="mx-auto max-w-7xl">
-        <BannerVisual banner={banner} />
-      </div>
-    </section>
+    <>
+      {banner?.image_url ? (
+        <section className="relative px-4 py-5 sm:px-8 sm:py-8" aria-label="Current promotion">
+          <div className="mx-auto max-w-7xl">
+            <BannerVisual banner={banner} />
+          </div>
+        </section>
+      ) : null}
+
+      <HomepageMerchandising products={products} enabled={ready} />
+    </>
   );
 }
