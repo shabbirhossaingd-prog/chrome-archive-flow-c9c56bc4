@@ -4,9 +4,24 @@
  * Mobile keeps the same appearance with cheaper compositor work.
  */
 
+.liquid-chrome-placeholder {
+  background:
+    radial-gradient(circle at 44% 42%, rgba(255,255,255,0.34), rgba(178,184,190,0.18) 28%, rgba(255,255,255,0.05) 52%, transparent 74%),
+    radial-gradient(circle at 68% 62%, rgba(255,255,255,0.18), transparent 46%);
+  filter: blur(var(--liquid-blur, 22px)) grayscale(1) contrast(1.2);
+  mask-image: radial-gradient(closest-side, #000 20%, rgba(0,0,0,0.45) 58%, transparent 92%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, rgba(0,0,0,0.45) 58%, transparent 92%);
+  mix-blend-mode: screen;
+  transition: opacity 420ms ease;
+}
+
 .liquid-chrome-image {
   filter: blur(var(--liquid-blur, 22px)) grayscale(1) contrast(1.35);
   will-change: transform;
+}
+
+img {
+  max-width: 100%;
 }
 
 @media (max-width: 639px) {
@@ -15,6 +30,7 @@
     -webkit-backdrop-filter: blur(8px) saturate(108%);
   }
 
+  .liquid-chrome-placeholder,
   .liquid-chrome-image {
     filter: blur(9px) grayscale(1) contrast(1.28);
     animation: none !important;
@@ -34,6 +50,7 @@
   .home-hero-logo {
     animation: none !important;
     transform: translateZ(0);
+    width: min(66vw, 25rem) !important;
   }
 
   .home-hero-grain {
@@ -45,11 +62,12 @@
   }
 
   .reveal {
-    transition-duration: 620ms;
+    transition-duration: 520ms;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .liquid-chrome-placeholder,
   .liquid-chrome-image,
   .animate-float-slow,
   .animate-drift,
