@@ -21,7 +21,7 @@ export const Route = createFileRoute("/shop/")({
       {
         name: "description",
         content:
-          "The ZZERKOFF object directory: rings, bracelets, chains, pant chains, earrings and eyewear.",
+          "The ZZERKOFF object directory: rings, bracelets, chains, earrings, watches and eyewear.",
       },
       { property: "og:title", content: "Shop the Objects — ZZERKOFF" },
       {
@@ -42,11 +42,12 @@ const DEFAULT_FILTERS = [
   { slug: "rings", name: "RINGS" },
   { slug: "bracelets", name: "BRACELETS" },
   { slug: "chains", name: "CHAINS" },
-  { slug: "pant-chains", name: "PANT CHAINS" },
   { slug: "earrings", name: "EARRINGS" },
   { slug: "eyewear", name: "EYEWEAR" },
+  { slug: "watches", name: "WATCHES" },
 ];
 
+const HIDDEN_PUBLIC_FILTERS = new Set(["pant-chain", "pant-chains"]);
 const AVAILABILITY = ["ALL", "IN STOCK", "LOW STOCK", "PRE-ORDER", "SALE"] as const;
 type Availability = (typeof AVAILABILITY)[number];
 type SortMode = "FEATURED" | "NEWEST" | "PRICE LOW" | "PRICE HIGH";
@@ -66,9 +67,11 @@ function ShopPage() {
   const filters = useMemo(() => {
     const map = new Map<string, string>();
     for (const row of DEFAULT_FILTERS) map.set(row.slug, row.name);
-    for (const category of categories) map.set(category.slug, category.name);
+    for (const category of categories) {
+      if (!HIDDEN_PUBLIC_FILTERS.has(category.slug)) map.set(category.slug, category.name);
+    }
     for (const product of products) {
-      if (!map.has(product.category)) {
+      if (!HIDDEN_PUBLIC_FILTERS.has(product.category) && !map.has(product.category)) {
         map.set(product.category, prettyCategory(product.category));
       }
     }
@@ -116,6 +119,7 @@ function ShopPage() {
   }, [active, availability, material, products, query, sort]);
 
   const visible = filtered.slice(0, Math.max(1, Number(json.per_section ?? 100)));
+  const activeFilter = filters.find((filter) => filter.slug === active);
   const hasAdvancedFilters =
     availability !== "ALL" || material !== "ALL" || sort !== "FEATURED" || !!query.trim();
 
@@ -164,39 +168,54 @@ function ShopPage() {
         </div>
       </section>
 
-      <section className="relative px-5 py-20 sm:px-8 sm:py-28">
+      <section className="relative px-5 py-16 sm:px-8 sm:py-24">
         <div className="mx-auto max-w-7xl">
           {(json.show_filters ?? true) && (
             <>
-              <Reveal className="border-y border-border/50 py-5">
-                <div className="flex items-center gap-3 overflow-x-auto pb-1 sm:flex-wrap">
-                  {filters.map((filter) => (
-                    <button
-                      key={filter.slug}
-                      type="button"
-                      onClick={() => setActive(filter.slug)}
-                      className={`shrink-0 text-[10px] uppercase tracking-[0.34em] transition-colors duration-500 ${
-                        active === filter.slug
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-chrome"
-                      }`}
-                    >
-                      {filter.name}
-                    </button>
-                  ))}
+              <Reveal className="glass-panel rounded-[26px] p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/45 pb-4">
+                  <div>
+                    <span className="text-[8px] uppercase tracking-[0.38em] text-muted-foreground">ALL CATEGORIES</span>
+                    <p className="mt-1 text-[9px] uppercase tracking-[0.24em] text-muted-foreground/80">
+                      {activeFilter?.name || "ALL"} selected
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setFiltersOpen((value) => !value)}
-                    className={`ml-auto inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[9px] uppercase tracking-[0.28em] transition-colors ${
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[8px] uppercase tracking-[0.24em] transition-colors ${
                       filtersOpen || hasAdvancedFilters
                         ? "border-chrome/60 bg-white/[0.05] text-foreground"
-                        : "border-border/60 text-muted-foreground"
+                        : "border-border/60 text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <SlidersHorizontal className="size-3.5" />
                     Filters
                     {hasAdvancedFilters ? " · ON" : ""}
                   </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2 min-[420px]:grid-cols-4 lg:grid-cols-4">
+                  {filters.map((filter) => {
+                    const isActive = active === filter.slug;
+                    return (
+                      <button
+                        key={filter.slug}
+                        type="button"
+                        onClick={() => setActive(filter.slug)}
+                        className={`relative min-h-12 rounded-2xl border px-2 py-3 text-center text-[8px] uppercase tracking-[0.2em] transition-colors duration-300 sm:px-3 sm:text-[9px] ${
+                          isActive
+                            ? "border-chrome/60 bg-white/[0.06] text-foreground"
+                            : "border-border/45 text-muted-foreground hover:border-chrome/35 hover:text-chrome"
+                        }`}
+                      >
+                        {filter.name}
+                        {isActive && (
+                          <span className="absolute inset-x-4 bottom-1 h-px rounded-full bg-chrome/80" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </Reveal>
 
@@ -271,14 +290,23 @@ function ShopPage() {
             </>
           )}
 
+          <Reveal className="mt-10 flex flex-wrap items-end justify-between gap-3 border-b border-border/45 pb-4">
+            <div>
+              <span className="text-[8px] uppercase tracking-[0.38em] text-muted-foreground">ALL PRODUCTS</span>
+              <p className="mt-2 text-[10px] uppercase tracking-[0.22em] text-foreground">
+                {activeFilter?.name || "ALL"} · {filtered.length} OBJECT{filtered.length === 1 ? "" : "S"}
+              </p>
+            </div>
+          </Reveal>
+
           {error ? (
-            <div className="glass-panel mt-12 rounded-[24px] p-8 text-center">
+            <div className="glass-panel mt-8 rounded-[24px] p-8 text-center">
               <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
                 The object directory could not load. Try refreshing.
               </p>
             </div>
           ) : (
-            <div className="mt-12">
+            <div className="mt-8">
               <ProductGrid
                 products={visible}
                 loading={isLoading}
