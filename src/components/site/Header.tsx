@@ -22,6 +22,7 @@ const NAV = [
   { label: "SHOP THE LOOK", to: "/shop-the-look" as const },
   { label: "NEW COLLECTION", to: "/collection" as const },
   { label: "ARCHIVE", to: "/archive" as const },
+  { label: "BLOG", to: "/blog" as const },
   { label: "ABOUT", to: "/about" as const },
   { label: "CONTACT", to: "/contact" as const },
 ];
