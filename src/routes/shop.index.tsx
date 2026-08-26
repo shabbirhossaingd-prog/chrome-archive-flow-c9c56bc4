@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Layers3, ScanLine, Search, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Layers3, ScanLine, Search, SlidersHorizontal, X } from "lucide-react";
 import { PageShell, PageHeading } from "@/components/site/PageShell";
 import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
@@ -63,6 +63,7 @@ function ShopPage() {
   const [sort, setSort] = useState<SortMode>("FEATURED");
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
 
   const filters = useMemo(() => {
     const map = new Map<string, string>();
@@ -118,10 +119,21 @@ function ShopPage() {
     });
   }, [active, availability, material, products, query, sort]);
 
-  const visible = filtered.slice(0, Math.max(1, Number(json.per_section ?? 100)));
+  const pageSize = Math.max(1, Number(json.per_section ?? 15));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePageIndex = Math.min(pageIndex, totalPages - 1);
+  const visible = filtered.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize);
   const activeFilter = filters.find((filter) => filter.slug === active);
   const hasAdvancedFilters =
     availability !== "ALL" || material !== "ALL" || sort !== "FEATURED" || !!query.trim();
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [active, availability, material, query, sort]);
+
+  useEffect(() => {
+    if (pageIndex > totalPages - 1) setPageIndex(Math.max(0, totalPages - 1));
+  }, [pageIndex, totalPages]);
 
   const clearAdvanced = () => {
     setAvailability("ALL");
@@ -313,6 +325,31 @@ function ShopPage() {
                 priorityCount={2}
                 empty="No objects match these filters."
               />
+              {filtered.length > pageSize && (
+                <div className="mt-8 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
+                    disabled={safePageIndex === 0}
+                    className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label="Previous products"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">
+                    {safePageIndex + 1} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPageIndex((value) => Math.min(totalPages - 1, value + 1))}
+                    disabled={safePageIndex >= totalPages - 1}
+                    className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                    aria-label="Next products"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
