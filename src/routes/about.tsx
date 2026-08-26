@@ -6,8 +6,8 @@ import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
 import { SmartImage } from "@/components/site/SmartImage";
 import { usePage, pageJson, usePublishedPosts, formatDate } from "@/lib/cms";
-import campaign1 from "@/assets/campaign-1.jpg";
-import campaign2 from "@/assets/campaign-2.jpg";
+import campaign1 from "@/assets/campaign-1.webp";
+import campaign2 from "@/assets/campaign-2.webp";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -151,8 +151,9 @@ function AboutPage() {
                   <SmartImage
                     src={src}
                     alt="ZZERKOFF campaign imagery"
-                    width={1200}
-                    height={1500}
+                    width={900}
+                    height={1125}
+                    sizes="(max-width: 1024px) 100vw, 33vw"
                     className="aspect-4/5 w-full object-cover grayscale brightness-90"
                   />
                   <div className="grain-overlay" />
@@ -186,8 +187,9 @@ function AboutPage() {
                     <SmartImage
                       src={post.featured_image}
                       alt={post.title}
-                      width={900}
-                      height={1100}
+                      width={720}
+                      height={540}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="aspect-4/3 w-full object-cover grayscale transition-transform duration-1000 group-hover:scale-[1.03]"
                     />
                     <div className="p-6">
