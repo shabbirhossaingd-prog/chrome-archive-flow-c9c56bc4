@@ -30,8 +30,9 @@ export function ProductCard({
           <SmartImage
             src={product.primary_image}
             alt={product.name}
-            width={1024}
-            height={1280}
+            width={720}
+            height={900}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             eager={priority}
             className="aspect-4/5 w-full object-cover grayscale transition-transform duration-[1600ms] ease-out group-hover:scale-105"
           />
