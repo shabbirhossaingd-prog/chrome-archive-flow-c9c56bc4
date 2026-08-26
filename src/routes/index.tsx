@@ -95,32 +95,32 @@ function Index() {
           <img
             src="/images/zzerkoff-logo.webp"
             alt="ZZERKOFF liquid chrome ZZ monogram"
-            width={448}
-            height={448}
-            sizes="(max-width: 640px) 66vw, 28rem"
+            width={320}
+            height={320}
+            sizes="(max-width: 640px) 66vw, 20rem"
             fetchPriority="high"
             loading="eager"
             decoding="async"
-            className="home-hero-logo mx-auto w-[68vw] max-w-[34rem] animate-float-slow mix-blend-lighten contrast-125 sm:max-w-[28rem]"
+            className="home-hero-logo mx-auto w-[68vw] max-w-[34rem] animate-float-slow mix-blend-lighten contrast-125 sm:w-[30vw] sm:max-w-[18rem] lg:w-[20rem] lg:max-w-[20rem] xl:w-[21rem] xl:max-w-[21rem]"
           />
         </Reveal>
 
-        <Reveal delay={120} className="mt-2">
-          <h1 className="chrome-text font-display text-3xl tracking-[0.3em] sm:text-5xl">
+        <Reveal delay={120} className="mt-2 sm:mt-1">
+          <h1 className="chrome-text font-display text-3xl tracking-[0.3em] sm:text-4xl xl:text-5xl">
             Zzerkoff
           </h1>
-          <p className="mt-6 font-editorial text-lg italic text-chrome/80 sm:text-2xl">
+          <p className="mt-6 font-editorial text-lg italic text-chrome/80 sm:mt-4 sm:text-xl xl:text-2xl">
             Objects for the Afterdark.
           </p>
-          <p className="mt-6 text-[9px] uppercase tracking-[0.5em] text-muted-foreground sm:text-[10px]">
+          <p className="mt-6 text-[9px] uppercase tracking-[0.5em] text-muted-foreground sm:mt-4 sm:text-[10px]">
             Unisex / Chrome / Vintage / Underground
           </p>
         </Reveal>
 
-        <Reveal delay={240} className="mt-12">
+        <Reveal delay={240} className="mt-12 sm:mt-8">
           <Link
             to="/collection"
-            className="group inline-flex items-center gap-4 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-5 text-[10px] uppercase tracking-[0.45em] text-foreground backdrop-blur-md transition-all duration-700 hover:border-chrome hover:bg-white/[0.08]"
+            className="group inline-flex items-center gap-4 rounded-full border border-chrome/50 bg-black/45 px-8 py-5 text-[10px] uppercase tracking-[0.45em] text-foreground shadow-[0_0_28px_rgba(255,255,255,0.08)] backdrop-blur-md transition-all duration-700 hover:border-chrome hover:bg-white/[0.08] sm:px-7 sm:py-4 sm:text-[9px] xl:px-8 xl:py-5 xl:text-[10px]"
           >
             Enter {dropCode}
             <span className="transition-transform duration-700 group-hover:translate-x-1">→</span>
