@@ -60,7 +60,7 @@ const PRICE_RULE_COPY = [
   "Headphone / Earphone ৳1299–2999",
   "Belt ৳1299–1799",
   "Earring ৳399–799",
-  "Watch ৳6999–15999",
+  "Watch ৳15999–26999",
 ];
 
 const makeRow = (fileName: string, image: string): BulkRow => ({
@@ -332,9 +332,7 @@ function BulkProductImport() {
       if (result.failed.length) {
         toast.error(`${result.created.length} created · ${result.failed.length} failed. Failed rows were kept for review.`);
         const failedNames = new Set(result.failed.map((item) => item.name));
-        setRows((current) =>
-          current.filter((row) => !row.selected || failedNames.has(row.name)),
-        );
+        setRows((current) => current.filter((row) => !row.selected || failedNames.has(row.name)));
       } else {
         setRows((current) => current.filter((row) => !row.selected));
         toast.success(`${result.created.length} products ${publish ? "published" : "saved as drafts"}.`);
@@ -356,7 +354,7 @@ function BulkProductImport() {
           <span className="text-[9px] uppercase tracking-[0.4em] text-muted-foreground">CATALOGUE / FAST INTAKE</span>
           <h1 className="mt-4 font-display text-xl tracking-[0.22em] text-foreground">BULK PRODUCT IMPORT</h1>
           <p className="mt-3 max-w-3xl text-[10px] leading-relaxed text-muted-foreground">
-            Upload many product photos at once. Images are optimized to WebP, then Gemini detects product type, category, a unique ZZERKOFF-style name, copy, SEO and a price suggestion inside your fixed category range.
+            Upload many product photos at once. Images are optimized to WebP, then Gemini detects product type, category, a unique ZZERKOFF-style name, copy, SEO and a varied price inside your fixed category range.
           </p>
         </div>
         <Link to="/admin/products" className="text-[9px] uppercase tracking-[0.3em] text-chrome">← Objects</Link>
@@ -434,7 +432,7 @@ function BulkProductImport() {
       {rows.length === 0 && (
         <div className="glass-panel rounded-[28px] border-dashed p-12 text-center">
           <ImagePlus className="mx-auto size-8 text-muted-foreground" />
-          <p className="mt-5 font-display text-sm tracking-[0.2em] text-foreground">DROP 31 PHOTOS HERE IN ONE GO</p>
+          <p className="mt-5 font-display text-sm tracking-[0.2em] text-foreground">DROP PRODUCT PHOTOS HERE IN ONE GO</p>
           <p className="mx-auto mt-3 max-w-xl text-[9px] leading-relaxed text-muted-foreground">
             Each selected photo becomes one product row. Nothing is published until you review and press Publish Selected.
           </p>
@@ -509,7 +507,7 @@ function BulkProductImport() {
                       onChange={(event) => patchRow(row.localId, { quantity: event.target.value })}
                       placeholder="Exact qty"
                     />
-                    <span className="text-[7px] leading-relaxed text-muted-foreground">Only Admin sees this number. Customer sees status only.</span>
+                    <span className="text-[7px] leading-relaxed text-muted-foreground">PRE-ORDER stays PRE-ORDER even with 0 qty. Customers never see exact stock.</span>
                   </div>
                 </div>
 
