@@ -34,7 +34,10 @@ export const Route = createFileRoute("/shop/")({
 });
 
 type ShopJson = {
+  show_directory?: boolean;
+  show_categories?: boolean;
   show_filters?: boolean;
+  show_products?: boolean;
   per_section?: number;
 };
 
@@ -64,6 +67,11 @@ function ShopPage() {
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
+
+  const showDirectory = json.show_directory ?? true;
+  const showCategories = json.show_categories ?? true;
+  const showFilters = json.show_filters ?? true;
+  const showProducts = json.show_products ?? true;
 
   const filters = useMemo(() => {
     const map = new Map<string, string>();
@@ -155,83 +163,93 @@ function ShopPage() {
             />
           </Reveal>
 
-          <Reveal delay={100} className="mt-10 grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
-            <Link
-              to="/shop-the-look"
-              className="glass-panel flex items-center gap-4 rounded-[22px] p-4 transition-colors hover:border-chrome/50"
-            >
-              <ScanLine className="size-5 text-muted-foreground" />
-              <div>
-                <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">Styling</span>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-foreground">Shop the Look</p>
-              </div>
-            </Link>
-            <Link
-              to="/bundles"
-              className="glass-panel flex items-center gap-4 rounded-[22px] p-4 transition-colors hover:border-chrome/50"
-            >
-              <Layers3 className="size-5 text-muted-foreground" />
-              <div>
-                <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">Curated</span>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-foreground">Bundle Sets</p>
-              </div>
-            </Link>
-          </Reveal>
+          {showDirectory && (
+            <Reveal delay={100} className="mt-10 grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
+              <Link
+                to="/shop-the-look"
+                className="glass-panel flex items-center gap-4 rounded-[22px] p-4 transition-colors hover:border-chrome/50"
+              >
+                <ScanLine className="size-5 text-muted-foreground" />
+                <div>
+                  <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">Styling</span>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-foreground">Shop the Look</p>
+                </div>
+              </Link>
+              <Link
+                to="/bundles"
+                className="glass-panel flex items-center gap-4 rounded-[22px] p-4 transition-colors hover:border-chrome/50"
+              >
+                <Layers3 className="size-5 text-muted-foreground" />
+                <div>
+                  <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">Curated</span>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-foreground">Bundle Sets</p>
+                </div>
+              </Link>
+            </Reveal>
+          )}
         </div>
       </section>
 
       <section className="relative px-5 py-14 sm:px-8 sm:py-22">
         <div className="mx-auto max-w-7xl">
-          {(json.show_filters ?? true) && (
+          {(showCategories || showFilters) && (
             <>
               <Reveal className="glass-panel rounded-[22px] p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/45 pb-3">
                   <div>
-                    <span className="text-[7px] uppercase tracking-[0.34em] text-muted-foreground sm:text-[8px]">ALL CATEGORIES</span>
-                    <p className="mt-1 text-[8px] uppercase tracking-[0.2em] text-muted-foreground/75">
-                      {activeFilter?.name || "ALL"} selected
-                    </p>
+                    <span className="text-[7px] uppercase tracking-[0.34em] text-muted-foreground sm:text-[8px]">
+                      {showCategories ? "ALL CATEGORIES" : "FILTERS"}
+                    </span>
+                    {showCategories && (
+                      <p className="mt-1 text-[8px] uppercase tracking-[0.2em] text-muted-foreground/75">
+                        {activeFilter?.name || "ALL"} selected
+                      </p>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setFiltersOpen((value) => !value)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[7px] uppercase tracking-[0.2em] transition-colors sm:text-[8px] ${
-                      filtersOpen || hasAdvancedFilters
-                        ? "border-chrome/60 bg-white/[0.05] text-foreground"
-                        : "border-border/60 text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <SlidersHorizontal className="size-3" />
-                    Filters
-                    {hasAdvancedFilters ? " · ON" : ""}
-                  </button>
+                  {showFilters && (
+                    <button
+                      type="button"
+                      onClick={() => setFiltersOpen((value) => !value)}
+                      className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[7px] uppercase tracking-[0.2em] transition-colors sm:text-[8px] ${
+                        filtersOpen || hasAdvancedFilters
+                          ? "border-chrome/60 bg-white/[0.05] text-foreground"
+                          : "border-border/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <SlidersHorizontal className="size-3" />
+                      Filters
+                      {hasAdvancedFilters ? " · ON" : ""}
+                    </button>
+                  )}
                 </div>
 
-                <div className="-mx-1 mt-3 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                  {filters.map((filter) => {
-                    const isActive = active === filter.slug;
-                    return (
-                      <button
-                        key={filter.slug}
-                        type="button"
-                        onClick={() => setActive(filter.slug)}
-                        className={`relative inline-flex h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3 text-[7px] uppercase tracking-[0.14em] transition-colors duration-300 sm:h-8 sm:px-3.5 sm:text-[8px] ${
-                          isActive
-                            ? "border-chrome/60 bg-white/[0.055] text-foreground"
-                            : "border-border/45 text-muted-foreground hover:border-chrome/35 hover:text-chrome"
-                        }`}
-                      >
-                        {filter.name}
-                        {isActive && (
-                          <span className="absolute inset-x-3 bottom-0.5 h-px rounded-full bg-chrome/80" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                {showCategories && (
+                  <div className="-mx-1 mt-3 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    {filters.map((filter) => {
+                      const isActive = active === filter.slug;
+                      return (
+                        <button
+                          key={filter.slug}
+                          type="button"
+                          onClick={() => setActive(filter.slug)}
+                          className={`relative inline-flex h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3 text-[7px] uppercase tracking-[0.14em] transition-colors duration-300 sm:h-8 sm:px-3.5 sm:text-[8px] ${
+                            isActive
+                              ? "border-chrome/60 bg-white/[0.055] text-foreground"
+                              : "border-border/45 text-muted-foreground hover:border-chrome/35 hover:text-chrome"
+                          }`}
+                        >
+                          {filter.name}
+                          {isActive && (
+                            <span className="absolute inset-x-3 bottom-0.5 h-px rounded-full bg-chrome/80" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </Reveal>
 
-              {filtersOpen && (
+              {showFilters && filtersOpen && (
                 <Reveal className="glass-panel mt-4 rounded-[24px] p-5 sm:p-6">
                   <div className="grid gap-5 lg:grid-cols-[1.25fr_1fr_1fr_1fr]">
                     <label className="block">
@@ -302,55 +320,59 @@ function ShopPage() {
             </>
           )}
 
-          <Reveal className="mt-9 flex flex-wrap items-end justify-between gap-3 border-b border-border/45 pb-4">
-            <div>
-              <span className="text-[8px] uppercase tracking-[0.38em] text-muted-foreground">ALL PRODUCTS</span>
-              <p className="mt-2 text-[10px] uppercase tracking-[0.22em] text-foreground">
-                {activeFilter?.name || "ALL"} · {filtered.length} OBJECT{filtered.length === 1 ? "" : "S"}
-              </p>
-            </div>
-          </Reveal>
+          {showProducts && (
+            <>
+              <Reveal className="mt-9 flex flex-wrap items-end justify-between gap-3 border-b border-border/45 pb-4">
+                <div>
+                  <span className="text-[8px] uppercase tracking-[0.38em] text-muted-foreground">ALL PRODUCTS</span>
+                  <p className="mt-2 text-[10px] uppercase tracking-[0.22em] text-foreground">
+                    {activeFilter?.name || "ALL"} · {filtered.length} OBJECT{filtered.length === 1 ? "" : "S"}
+                  </p>
+                </div>
+              </Reveal>
 
-          {error ? (
-            <div className="glass-panel mt-8 rounded-[24px] p-8 text-center">
-              <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
-                The object directory could not load. Try refreshing.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-8">
-              <ProductGrid
-                products={visible}
-                loading={isLoading}
-                priorityCount={2}
-                empty="No objects match these filters."
-              />
-              {filtered.length > pageSize && (
-                <div className="mt-8 flex items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
-                    disabled={safePageIndex === 0}
-                    className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-                    aria-label="Previous products"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">
-                    {safePageIndex + 1} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPageIndex((value) => Math.min(totalPages - 1, value + 1))}
-                    disabled={safePageIndex >= totalPages - 1}
-                    className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-                    aria-label="Next products"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
+              {error ? (
+                <div className="glass-panel mt-8 rounded-[24px] p-8 text-center">
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+                    The object directory could not load. Try refreshing.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-8">
+                  <ProductGrid
+                    products={visible}
+                    loading={isLoading}
+                    priorityCount={2}
+                    empty="No objects match these filters."
+                  />
+                  {filtered.length > pageSize && (
+                    <div className="mt-8 flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
+                        disabled={safePageIndex === 0}
+                        className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Previous products"
+                      >
+                        <ChevronLeft className="size-4" />
+                      </button>
+                      <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">
+                        {safePageIndex + 1} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPageIndex((value) => Math.min(totalPages - 1, value + 1))}
+                        disabled={safePageIndex >= totalPages - 1}
+                        className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Next products"
+                      >
+                        <ChevronRight className="size-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </section>
