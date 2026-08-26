@@ -5,8 +5,18 @@ import { cn } from "@/lib/utils";
 const PREFIX = "storage:";
 export const toStorageRef = (path: string) => `${PREFIX}${path}`;
 
+type SmartImageProps = {
+  src: string | null | undefined;
+  alt: string;
+  className?: string;
+  width?: number;
+  height?: number;
+  eager?: boolean;
+  sizes?: string;
+};
+
 /**
- * Renders a product image. Accepts either a normal URL/path or a
+ * Renders a product/content image. Accepts either a normal URL/path or a
  * "storage:<path>" reference for images uploaded through the admin dashboard.
  */
 export function SmartImage({
@@ -16,21 +26,15 @@ export function SmartImage({
   width,
   height,
   eager,
-}: {
-  src: string | null | undefined;
-  alt: string;
-  className?: string;
-  width?: number;
-  height?: number;
-  eager?: boolean;
-}) {
+  sizes,
+}: SmartImageProps) {
   const isStorage = !!src && src.startsWith(PREFIX);
   const path = isStorage ? src!.slice(PREFIX.length) : null;
 
   const { data: signed } = useQuery({
     queryKey: ["storage-image", path],
     enabled: !!path,
-    staleTime: 1000 * 60 * 50,
+    staleTime: 1000 * 60 * 55,
     gcTime: 1000 * 60 * 60,
     queryFn: async () => {
       const { data } = await supabase.storage
@@ -52,8 +56,9 @@ export function SmartImage({
       alt={alt}
       width={width}
       height={height}
+      sizes={sizes}
       loading={eager ? "eager" : "lazy"}
-      fetchPriority={eager ? "high" : "auto"}
+      fetchPriority={eager ? "high" : "low"}
       decoding="async"
       className={className}
     />
