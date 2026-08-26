@@ -106,7 +106,7 @@ function Index() {
         </Reveal>
 
         <Reveal delay={120} className="mt-2 sm:mt-1">
-          <h1 className="chrome-text font-display text-3xl tracking-[0.3em] sm:text-4xl xl:text-5xl">
+          <h1 className="chrome-text font-display text-3xl tracking-[0.3em] sm:text-2xl xl:text-3xl">
             Zzerkoff
           </h1>
           <p className="mt-6 font-editorial text-lg italic text-chrome/80 sm:mt-4 sm:text-xl xl:text-2xl">
