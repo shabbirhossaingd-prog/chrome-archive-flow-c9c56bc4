@@ -32,6 +32,10 @@ type AboutJson = {
   statement?: string;
   tagline?: string;
   campaign_images?: string[];
+  show_intro?: boolean;
+  show_statement?: boolean;
+  show_campaign?: boolean;
+  show_journal?: boolean;
 };
 
 function AboutPage() {
@@ -53,6 +57,10 @@ function AboutPage() {
     json.campaign_images && json.campaign_images.length > 0
       ? json.campaign_images
       : [campaign1, campaign2, campaign1];
+  const showIntro = json.show_intro ?? true;
+  const showStatement = json.show_statement ?? true;
+  const showCampaign = json.show_campaign ?? true;
+  const showJournal = json.show_journal ?? true;
 
   useEffect(() => {
     const update = () => setIsDesktop(window.innerWidth >= 768);
@@ -95,61 +103,67 @@ function AboutPage() {
             </h1>
           </Reveal>
 
-          <Reveal delay={180}>
-            <div className="mt-16 max-w-2xl space-y-8 font-editorial text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              {intro && <p>{intro}</p>}
-              {body
-                .split(/\n{2,}/)
-                .filter(Boolean)
-                .map((paragraph, i) => (
-                  <p key={i}>{paragraph}</p>
-                ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="relative isolate px-5 py-36 sm:px-8 sm:py-48">
-        <LiquidChrome
-          className="left-0 top-16 h-[26rem] w-[30rem]"
-          opacity={0.09}
-          blur={40}
-          flip
-        />
-        <div className="mx-auto max-w-6xl">
-          <Reveal>
-            <h2 className="chrome-text whitespace-pre-line font-display text-4xl leading-[1.08] tracking-[0.06em] sm:text-6xl lg:text-7xl">
-              {statement}
-            </h2>
-          </Reveal>
-          <Reveal delay={200}>
-            <p className="mt-14 font-editorial text-2xl italic text-chrome/80 sm:text-3xl">
-              {tagline}
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="px-5 pb-32 sm:px-8">
-        <div className="mx-auto grid max-w-6xl gap-4 sm:gap-6 lg:grid-cols-3">
-          {campaignImages.slice(0, 6).map((src, i) => (
-            <Reveal key={`${src}-${i}`} delay={(i % 3) * 140}>
-              <figure className="glass-panel relative overflow-hidden rounded-[26px]">
-                <SmartImage
-                  src={src}
-                  alt="ZZERKOFF campaign imagery"
-                  width={1200}
-                  height={1500}
-                  className="aspect-4/5 w-full object-cover grayscale brightness-90"
-                />
-                <div className="grain-overlay" />
-              </figure>
+          {showIntro && (
+            <Reveal delay={180}>
+              <div className="mt-16 max-w-2xl space-y-8 font-editorial text-lg leading-relaxed text-muted-foreground sm:text-xl">
+                {intro && <p>{intro}</p>}
+                {body
+                  .split(/\n{2,}/)
+                  .filter(Boolean)
+                  .map((paragraph, i) => (
+                    <p key={i}>{paragraph}</p>
+                  ))}
+              </div>
             </Reveal>
-          ))}
+          )}
         </div>
       </section>
 
-      {posts.length > 0 && (
+      {showStatement && (
+        <section className="relative isolate px-5 py-36 sm:px-8 sm:py-48">
+          <LiquidChrome
+            className="left-0 top-16 h-[26rem] w-[30rem]"
+            opacity={0.09}
+            blur={40}
+            flip
+          />
+          <div className="mx-auto max-w-6xl">
+            <Reveal>
+              <h2 className="chrome-text whitespace-pre-line font-display text-4xl leading-[1.08] tracking-[0.06em] sm:text-6xl lg:text-7xl">
+                {statement}
+              </h2>
+            </Reveal>
+            <Reveal delay={200}>
+              <p className="mt-14 font-editorial text-2xl italic text-chrome/80 sm:text-3xl">
+                {tagline}
+              </p>
+            </Reveal>
+          </div>
+        </section>
+      )}
+
+      {showCampaign && (
+        <section className="px-5 pb-32 sm:px-8">
+          <div className="mx-auto grid max-w-6xl gap-4 sm:gap-6 lg:grid-cols-3">
+            {campaignImages.slice(0, 6).map((src, i) => (
+              <Reveal key={`${src}-${i}`} delay={(i % 3) * 140}>
+                <figure className="glass-panel relative overflow-hidden rounded-[26px]">
+                  <SmartImage
+                    src={src}
+                    alt="ZZERKOFF campaign imagery"
+                    width={1200}
+                    height={1500}
+                    className="aspect-4/5 w-full object-cover grayscale brightness-90"
+                  />
+                  <div className="grain-overlay" />
+                </figure>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {showJournal && posts.length > 0 && (
         <section className="px-5 pb-32 sm:px-8">
           <div className="mx-auto max-w-7xl">
             <Reveal>
