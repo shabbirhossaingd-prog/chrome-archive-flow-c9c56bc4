@@ -12,6 +12,8 @@ type Props = {
   blur?: number;
   /** Load the decorative bitmap after the first paint. */
   defer?: boolean;
+  /** Use only for the first above-the-fold chrome visual. */
+  priority?: boolean;
 };
 
 /** Reusable decorative liquid chrome fragment. Purely presentational. */
@@ -21,14 +23,16 @@ export function LiquidChrome({
   flip = false,
   blur = 22,
   defer = true,
+  priority = false,
 }: Props) {
-  const [ready, setReady] = useState(!defer);
+  const shouldDefer = defer && !priority;
+  const [ready, setReady] = useState(!shouldDefer);
 
   useEffect(() => {
-    if (!defer) return;
+    if (!shouldDefer) return;
     const timer = window.setTimeout(() => setReady(true), 900);
     return () => window.clearTimeout(timer);
-  }, [defer]);
+  }, [shouldDefer]);
 
   return (
     <div
@@ -49,9 +53,9 @@ export function LiquidChrome({
         <img
           src={chromeBlob}
           alt=""
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
           decoding="async"
-          fetchPriority="low"
+          fetchPriority={priority ? "high" : "low"}
           className="liquid-chrome-image absolute inset-0 h-full w-full object-cover animate-drift"
           style={
             {
