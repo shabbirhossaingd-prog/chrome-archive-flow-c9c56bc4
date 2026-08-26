@@ -12,6 +12,34 @@ const xmlEscape = (value: string) =>
 
 const normalizeSiteUrl = (value: string) => value.replace(/\/+$/, "");
 
+const STATIC_URLS = [
+  { path: "", priority: 1.0 },
+  { path: "/shop", priority: 0.95 },
+  { path: "/shop/rings", priority: 0.9 },
+  { path: "/shop/bracelets", priority: 0.9 },
+  { path: "/shop/chains", priority: 0.9 },
+  { path: "/shop/earrings", priority: 0.9 },
+  { path: "/shop/eyewear", priority: 0.9 },
+  { path: "/shop/watches", priority: 0.9 },
+  { path: "/collection", priority: 0.85 },
+  { path: "/archive", priority: 0.8 },
+  { path: "/blog", priority: 0.85 },
+  { path: "/bundles", priority: 0.8 },
+  { path: "/shop-the-look", priority: 0.8 },
+  { path: "/size-guide", priority: 0.75 },
+  { path: "/care-guide", priority: 0.75 },
+  { path: "/about", priority: 0.75 },
+  { path: "/contact", priority: 0.7 },
+  { path: "/faq", priority: 0.7 },
+  { path: "/shipping", priority: 0.65 },
+  { path: "/returns", priority: 0.65 },
+  { path: "/privacy", priority: 0.45 },
+  { path: "/terms", priority: 0.45 },
+  { path: "/wishlist", priority: 0.35 },
+  { path: "/cart", priority: 0.35 },
+  { path: "/track-order", priority: 0.35 },
+];
+
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
@@ -22,27 +50,11 @@ export const Route = createFileRoute("/sitemap.xml")({
             : FALLBACK_SITE_URL,
         );
 
-        const staticUrls = [
-          "",
-          "/shop",
-          "/collection",
-          "/archive",
-          "/blog",
-          "/bundles",
-          "/shop-the-look",
-          "/wishlist",
-          "/cart",
-          "/track-order",
-          "/size-guide",
-          "/care-guide",
-          "/about",
-          "/contact",
-          "/faq",
-          "/shipping",
-          "/returns",
-          "/privacy",
-          "/terms",
-        ].map((path) => ({ path, lastmod: null as string | null, priority: path === "" ? 1 : 0.8 }));
+        const now = new Date().toISOString();
+        const staticUrls = STATIC_URLS.map((entry) => ({
+          ...entry,
+          lastmod: now as string | null,
+        }));
 
         const dynamicUrls: Array<{ path: string; lastmod: string | null; priority: number }> = [];
 
@@ -72,7 +84,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             dynamicUrls.push({
               path: `/product/${encodeURIComponent(product.slug)}`,
               lastmod: product.updated_at,
-              priority: 0.9,
+              priority: 0.92,
             });
           }
 
@@ -80,7 +92,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             dynamicUrls.push({
               path: `/blog/${encodeURIComponent(post.slug)}`,
               lastmod: post.updated_at,
-              priority: 0.75,
+              priority: 0.82,
             });
           }
 
@@ -88,7 +100,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             dynamicUrls.push({
               path: `/shop/${encodeURIComponent(category.slug)}`,
               lastmod: category.created_at,
-              priority: 0.8,
+              priority: 0.88,
             });
           }
 
@@ -97,7 +109,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             dynamicUrls.push({
               path: `/archive/${encodeURIComponent(collection.slug)}`,
               lastmod: collection.updated_at,
-              priority: 0.7,
+              priority: 0.72,
             });
           }
         } catch (error) {
@@ -116,7 +128,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             const lastmod = entry.lastmod
               ? `\n  <lastmod>${xmlEscape(new Date(entry.lastmod).toISOString())}</lastmod>`
               : "";
-            return `<url>\n  <loc>${xmlEscape(`${siteUrl}${entry.path}`)}</loc>${lastmod}\n  <changefreq>weekly</changefreq>\n  <priority>${entry.priority.toFixed(1)}</priority>\n</url>`;
+            return `<url>\n  <loc>${xmlEscape(`${siteUrl}${entry.path}`)}</loc>${lastmod}\n  <changefreq>weekly</changefreq>\n  <priority>${entry.priority.toFixed(2)}</priority>\n</url>`;
           })
           .join("\n")}\n</urlset>`;
 
