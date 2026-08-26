@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { usePages, type Page } from "@/lib/cms";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { AdminButton, Field, Toggle, adminField } from "@/components/admin/AdminUI";
+import { AdminButton, Field, adminField } from "@/components/admin/AdminUI";
 
 export const Route = createFileRoute("/_authenticated/admin/pages")({
   component: AdminPages,
@@ -16,11 +16,17 @@ type AboutJson = {
   tagline?: string;
   campaign_images?: string[];
   blocks?: Array<{ heading?: string; body?: string }>;
+  show_intro?: boolean;
+  show_statement?: boolean;
+  show_campaign?: boolean;
+  show_journal?: boolean;
 };
 
 type ShopJson = {
+  show_directory?: boolean;
   show_filters?: boolean;
   show_categories?: boolean;
+  show_products?: boolean;
   sort?: string;
   per_section?: number;
 };
@@ -38,8 +44,14 @@ type Form = {
   statement: string;
   tagline: string;
   campaign_images: string[];
+  show_directory: boolean;
   show_filters: boolean;
   show_categories: boolean;
+  show_products: boolean;
+  show_about_intro: boolean;
+  show_about_statement: boolean;
+  show_about_campaign: boolean;
+  show_about_journal: boolean;
   per_section: string;
 };
 
@@ -58,10 +70,58 @@ function fromPage(p: Page): Form {
     statement: json.statement ?? "",
     tagline: json.tagline ?? "",
     campaign_images: json.campaign_images ?? [],
+    show_directory: json.show_directory ?? true,
     show_filters: json.show_filters ?? true,
     show_categories: json.show_categories ?? true,
-    per_section: String(json.per_section ?? 12),
+    show_products: json.show_products ?? true,
+    show_about_intro: json.show_intro ?? true,
+    show_about_statement: json.show_statement ?? true,
+    show_about_campaign: json.show_campaign ?? true,
+    show_about_journal: json.show_journal ?? true,
+    per_section: String(json.per_section ?? 15),
   };
+}
+
+type SectionVisibilityProps = {
+  title: string;
+  description: string;
+  visible: boolean;
+  onToggle: () => void;
+};
+
+function SectionVisibility({ title, description, visible, onToggle }: SectionVisibilityProps) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-[18px] border border-border/55 px-4 py-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[9px] uppercase tracking-[0.24em] text-foreground">{title}</p>
+          <span
+            className={`rounded-full border px-2 py-1 text-[7px] uppercase tracking-[0.22em] ${
+              visible
+                ? "border-emerald-400/25 text-emerald-200/80"
+                : "border-red-400/35 text-red-200/90"
+            }`}
+          >
+            {visible ? "Visible" : "Hidden"}
+          </span>
+        </div>
+        <p className="mt-1 text-[8px] uppercase tracking-[0.18em] text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`shrink-0 rounded-full border px-3 py-2 text-[7px] uppercase tracking-[0.24em] transition-colors ${
+          visible
+            ? "border-red-400/35 text-red-200/90 hover:bg-red-400/10"
+            : "border-chrome/45 text-chrome hover:bg-white/[0.05]"
+        }`}
+      >
+        {visible ? "Delete" : "Restore"}
+      </button>
+    </div>
+  );
 }
 
 function AdminPages() {
@@ -91,6 +151,12 @@ function AdminPages() {
     setForm({ ...form, [key]: value });
   };
 
+  const toggle = <K extends keyof Form>(key: K) => {
+    if (!form || typeof form[key] !== "boolean") return;
+    setDirty(true);
+    setForm({ ...form, [key]: !form[key] } as Form);
+  };
+
   const save = useMutation({
     mutationFn: async () => {
       if (!form || !currentPage) throw new Error("Select a page");
@@ -103,15 +169,21 @@ function AdminPages() {
           statement: form.statement,
           tagline: form.tagline,
           campaign_images: form.campaign_images,
+          show_intro: form.show_about_intro,
+          show_statement: form.show_about_statement,
+          show_campaign: form.show_about_campaign,
+          show_journal: form.show_about_journal,
         };
       }
 
       if (form.page_key === "shop") {
         content_json = {
           ...content_json,
+          show_directory: form.show_directory,
           show_filters: form.show_filters,
           show_categories: form.show_categories,
-          per_section: Math.max(1, Number(form.per_section || 12)),
+          show_products: form.show_products,
+          per_section: Math.max(1, Number(form.per_section || 15)),
         };
       }
 
@@ -229,6 +301,77 @@ function AdminPages() {
             </Field>
           </div>
 
+          {(form.page_key === "shop" || form.page_key === "about") && (
+            <div className="glass-panel space-y-4 rounded-[24px] p-6">
+              <div>
+                <h2 className="font-display text-sm tracking-[0.22em] text-foreground">
+                  SECTION DELETE / VISIBILITY
+                </h2>
+                <p className="mt-2 text-[8px] uppercase tracking-[0.28em] text-muted-foreground">
+                  Delete means hide from website. Restore brings it back.
+                </p>
+              </div>
+
+              {form.page_key === "shop" && (
+                <div className="space-y-3">
+                  <SectionVisibility
+                    title="Directory cards"
+                    description="Shop the Look / Bundle Sets card section"
+                    visible={form.show_directory}
+                    onToggle={() => toggle("show_directory")}
+                  />
+                  <SectionVisibility
+                    title="All categories"
+                    description="Horizontal category button row"
+                    visible={form.show_categories}
+                    onToggle={() => toggle("show_categories")}
+                  />
+                  <SectionVisibility
+                    title="Filter drawer"
+                    description="Search, availability, material and sort"
+                    visible={form.show_filters}
+                    onToggle={() => toggle("show_filters")}
+                  />
+                  <SectionVisibility
+                    title="All products"
+                    description="Product grid with left/right arrows"
+                    visible={form.show_products}
+                    onToggle={() => toggle("show_products")}
+                  />
+                </div>
+              )}
+
+              {form.page_key === "about" && (
+                <div className="space-y-3">
+                  <SectionVisibility
+                    title="Intro story"
+                    description="Subtitle and body text under About title"
+                    visible={form.show_about_intro}
+                    onToggle={() => toggle("show_about_intro")}
+                  />
+                  <SectionVisibility
+                    title="Statement"
+                    description="Not made to blend in / tagline block"
+                    visible={form.show_about_statement}
+                    onToggle={() => toggle("show_about_statement")}
+                  />
+                  <SectionVisibility
+                    title="Campaign images"
+                    description="About page image grid"
+                    visible={form.show_about_campaign}
+                    onToggle={() => toggle("show_about_campaign")}
+                  />
+                  <SectionVisibility
+                    title="Journal"
+                    description="Latest blog cards with arrows"
+                    visible={form.show_about_journal}
+                    onToggle={() => toggle("show_about_journal")}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="glass-panel space-y-6 rounded-[24px] p-6">
             <ImageUploader
               label="Hero / decorative image"
@@ -265,30 +408,16 @@ function AdminPages() {
             )}
 
             {form.page_key === "shop" && (
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <Toggle
-                    label="Show filters"
-                    checked={form.show_filters}
-                    onChange={(v) => set("show_filters", v)}
-                  />
-                  <Toggle
-                    label="Show categories"
-                    checked={form.show_categories}
-                    onChange={(v) => set("show_categories", v)}
-                  />
-                </div>
-                <Field label="Products per section">
-                  <input
-                    className={adminField}
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={form.per_section}
-                    onChange={(e) => set("per_section", e.target.value)}
-                  />
-                </Field>
-              </div>
+              <Field label="Products per page / arrow batch">
+                <input
+                  className={adminField}
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={form.per_section}
+                  onChange={(e) => set("per_section", e.target.value)}
+                />
+              </Field>
             )}
           </div>
 
