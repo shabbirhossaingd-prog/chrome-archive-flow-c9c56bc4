@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import chromeBlob from "@/assets/chrome-blob.webp";
 import "@/performance.css";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,8 @@ type Props = {
   opacity?: number;
   flip?: boolean;
   blur?: number;
+  /** Load the decorative bitmap after the first paint. */
+  defer?: boolean;
 };
 
 /** Reusable decorative liquid chrome fragment. Purely presentational. */
@@ -17,31 +20,53 @@ export function LiquidChrome({
   opacity = 0.22,
   flip = false,
   blur = 22,
+  defer = true,
 }: Props) {
+  const [ready, setReady] = useState(!defer);
+
+  useEffect(() => {
+    if (!defer) return;
+    const timer = window.setTimeout(() => setReady(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [defer]);
+
   return (
     <div
       aria-hidden
       className={cn("pointer-events-none absolute -z-10 select-none", className)}
     >
-      <img
-        src={chromeBlob}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        className="liquid-chrome-image h-full w-full object-cover animate-drift"
+      <div
+        className="liquid-chrome-placeholder h-full w-full"
         style={
           {
-            opacity,
-            "--liquid-blur": `${blur}px`,
+            opacity: ready ? 0 : Math.min(opacity * 0.45, 0.12),
             transform: flip ? "scaleX(-1)" : undefined,
-            maskImage:
-              "radial-gradient(closest-side, #000 18%, rgba(0,0,0,0.45) 55%, transparent 92%)",
-            WebkitMaskImage:
-              "radial-gradient(closest-side, #000 18%, rgba(0,0,0,0.45) 55%, transparent 92%)",
-            mixBlendMode: "screen",
+            "--liquid-blur": `${blur}px`,
           } as CSSProperties
         }
       />
+      {ready && (
+        <img
+          src={chromeBlob}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          className="liquid-chrome-image absolute inset-0 h-full w-full object-cover animate-drift"
+          style={
+            {
+              opacity,
+              "--liquid-blur": `${blur}px`,
+              transform: flip ? "scaleX(-1)" : undefined,
+              maskImage:
+                "radial-gradient(closest-side, #000 18%, rgba(0,0,0,0.45) 55%, transparent 92%)",
+              WebkitMaskImage:
+                "radial-gradient(closest-side, #000 18%, rgba(0,0,0,0.45) 55%, transparent 92%)",
+              mixBlendMode: "screen",
+            } as CSSProperties
+          }
+        />
+      )}
     </div>
   );
 }
