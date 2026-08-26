@@ -195,7 +195,7 @@ function ShopPage() {
                   </button>
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-1.5 min-[420px]:grid-cols-4 lg:grid-cols-4 lg:gap-2">
+                <div className="-mx-1 mt-3 flex flex-nowrap gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {filters.map((filter) => {
                     const isActive = active === filter.slug;
                     return (
@@ -203,7 +203,7 @@ function ShopPage() {
                         key={filter.slug}
                         type="button"
                         onClick={() => setActive(filter.slug)}
-                        className={`relative min-h-8 rounded-xl border px-1.5 py-2 text-center text-[7px] uppercase tracking-[0.13em] transition-colors duration-300 sm:min-h-9 sm:px-2 sm:text-[8px] sm:tracking-[0.16em] ${
+                        className={`relative inline-flex h-7 shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-3 text-[7px] uppercase tracking-[0.14em] transition-colors duration-300 sm:h-8 sm:px-3.5 sm:text-[8px] ${
                           isActive
                             ? "border-chrome/60 bg-white/[0.055] text-foreground"
                             : "border-border/45 text-muted-foreground hover:border-chrome/35 hover:text-chrome"
