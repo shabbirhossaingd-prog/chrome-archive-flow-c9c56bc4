@@ -95,13 +95,13 @@ function Index() {
           <img
             src="/images/zzerkoff-logo.webp"
             alt="ZZERKOFF liquid chrome ZZ monogram"
-            width={448}
-            height={448}
-            sizes="(max-width: 640px) 66vw, 28rem"
+            width={512}
+            height={512}
+            sizes="(max-width: 640px) 66vw, 32rem"
             fetchPriority="high"
             loading="eager"
             decoding="async"
-            className="home-hero-logo mx-auto w-[68vw] max-w-[34rem] animate-float-slow mix-blend-lighten contrast-125 sm:w-[28rem] sm:max-w-[28rem]"
+            className="home-hero-logo mx-auto w-[68vw] max-w-[34rem] animate-float-slow mix-blend-lighten contrast-125 sm:w-[32rem] sm:max-w-[32rem]"
           />
         </Reveal>
 
