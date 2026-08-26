@@ -136,7 +136,11 @@ function AboutPage() {
 
             <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {posts.slice(0, 6).map((post, i) => (
-                <Reveal key={post.id} delay={(i % 3) * 100}>
+                <Reveal
+                  key={post.id}
+                  delay={(i % 3) * 100}
+                  className={i >= 3 ? "hidden md:block" : undefined}
+                >
                   <Link
                     to="/blog/$slug"
                     params={{ slug: post.slug }}
@@ -167,6 +171,18 @@ function AboutPage() {
                 </Reveal>
               ))}
             </div>
+
+            {posts.length > 3 && (
+              <Reveal delay={220} className="mt-10 text-center">
+                <Link
+                  to="/blog"
+                  className="group inline-flex items-center gap-3 rounded-full border border-chrome/45 bg-white/[0.03] px-7 py-4 text-[9px] uppercase tracking-[0.35em] text-foreground transition-colors hover:border-chrome hover:bg-white/[0.07]"
+                >
+                  All blog
+                  <span className="transition-transform duration-500 group-hover:translate-x-1">→</span>
+                </Link>
+              </Reveal>
+            )}
           </div>
         </section>
       )}
