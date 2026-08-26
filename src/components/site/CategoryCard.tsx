@@ -20,8 +20,9 @@ export function CategoryCard({
       <SmartImage
         src={category.image_url}
         alt={`${category.name} objects`}
-        width={1024}
-        height={1280}
+        width={720}
+        height={960}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         className="aspect-3/4 w-full object-cover grayscale brightness-75 transition-all duration-[1800ms] ease-out group-hover:scale-105 group-hover:brightness-90"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent" />
