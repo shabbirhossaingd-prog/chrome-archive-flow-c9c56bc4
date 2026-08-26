@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageShell } from "@/components/site/PageShell";
 import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
@@ -36,6 +38,8 @@ function AboutPage() {
   const { page } = usePage("about");
   const { data: posts = [] } = usePublishedPosts();
   const json = pageJson<AboutJson>(page);
+  const [blogPage, setBlogPage] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const label = page?.label || "ZZ / LABEL";
   const title = page?.title || "THIS IS ZZERKOFF.";
@@ -49,6 +53,29 @@ function AboutPage() {
     json.campaign_images && json.campaign_images.length > 0
       ? json.campaign_images
       : [campaign1, campaign2, campaign1];
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const blogPageSize = isDesktop ? 6 : 3;
+  const blogTotalPages = Math.max(1, Math.ceil(posts.length / blogPageSize));
+  const safeBlogPage = Math.min(blogPage, blogTotalPages - 1);
+  const visiblePosts = posts.slice(
+    safeBlogPage * blogPageSize,
+    safeBlogPage * blogPageSize + blogPageSize,
+  );
+
+  useEffect(() => {
+    setBlogPage(0);
+  }, [blogPageSize, posts.length]);
+
+  useEffect(() => {
+    if (blogPage > blogTotalPages - 1) setBlogPage(Math.max(0, blogTotalPages - 1));
+  }, [blogPage, blogTotalPages]);
 
   return (
     <PageShell>
@@ -135,7 +162,7 @@ function AboutPage() {
             </Reveal>
 
             <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {posts.slice(0, 6).map((post, i) => (
+              {visiblePosts.map((post, i) => (
                 <Reveal key={post.id} delay={(i % 3) * 100}>
                   <Link
                     to="/blog/$slug"
@@ -167,6 +194,32 @@ function AboutPage() {
                 </Reveal>
               ))}
             </div>
+
+            {posts.length > blogPageSize && (
+              <div className="mt-8 flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBlogPage((value) => Math.max(0, value - 1))}
+                  disabled={safeBlogPage === 0}
+                  className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Previous journal posts"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="text-[8px] uppercase tracking-[0.3em] text-muted-foreground">
+                  {safeBlogPage + 1} / {blogTotalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setBlogPage((value) => Math.min(blogTotalPages - 1, value + 1))}
+                  disabled={safeBlogPage >= blogTotalPages - 1}
+                  className="inline-flex size-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-chrome/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="Next journal posts"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}
