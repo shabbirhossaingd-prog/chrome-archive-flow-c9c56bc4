@@ -4,3 +4,4 @@ Disallow: /admin
 Disallow: /auth
 
 Sitemap: https://zzerkoff.vercel.app/sitemap.xml
+Sitemap: https://zzerkoff.vercel.app/sitemap.txt
