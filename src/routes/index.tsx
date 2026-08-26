@@ -33,6 +33,8 @@ export const Route = createFileRoute("/")({
     ],
     links: [
       { rel: "canonical", href: "https://zzerkoff.vercel.app/" },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "preload",
         href: "/images/zzerkoff-logo.webp",
@@ -93,8 +95,9 @@ function Index() {
           <img
             src="/images/zzerkoff-logo.webp"
             alt="ZZERKOFF liquid chrome ZZ monogram"
-            width={720}
-            height={720}
+            width={544}
+            height={544}
+            sizes="(max-width: 640px) 66vw, 34rem"
             fetchPriority="high"
             loading="eager"
             decoding="async"
@@ -152,6 +155,7 @@ function Index() {
               products={newDrop}
               loading={!catalogReady || isLoading}
               empty="New objects arriving soon."
+              priorityCount={2}
             />
           </div>
         </div>
@@ -166,8 +170,9 @@ function Index() {
               <SmartImage
                 src={featured.primary_image}
                 alt={featured.name}
-                width={1024}
-                height={1280}
+                width={900}
+                height={1125}
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 className="aspect-4/5 w-full object-cover grayscale"
               />
               <div className="grain-overlay" />
