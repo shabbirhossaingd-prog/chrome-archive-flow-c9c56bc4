@@ -5,10 +5,13 @@ import { useSite } from "@/lib/settings";
 
 const LINKS = [
   { label: "SHOP", to: "/shop" as const },
+  { label: "BLOG", to: "/blog" as const },
   { label: "SHOP THE LOOK", to: "/shop-the-look" as const },
   { label: "BUNDLES", to: "/bundles" as const },
   { label: "NEW COLLECTION", to: "/collection" as const },
   { label: "ARCHIVE", to: "/archive" as const },
+  { label: "ABOUT", to: "/about" as const },
+  { label: "CONTACT", to: "/contact" as const },
   { label: "WISHLIST", to: "/wishlist" as const },
   { label: "ACCOUNT", to: "/account" as const },
   { label: "TRACK ORDER", to: "/track-order" as const },
@@ -19,6 +22,15 @@ const LINKS = [
   { label: "FAQ", to: "/faq" as const },
   { label: "PRIVACY", to: "/privacy" as const },
   { label: "TERMS", to: "/terms" as const },
+];
+
+const SHOP_CATEGORY_LINKS = [
+  { label: "RINGS", slug: "rings" },
+  { label: "BRACELETS", slug: "bracelets" },
+  { label: "CHAINS", slug: "chains" },
+  { label: "EARRINGS", slug: "earrings" },
+  { label: "EYEWEAR", slug: "eyewear" },
+  { label: "WATCHES", slug: "watches" },
 ];
 
 export function Footer() {
@@ -53,11 +65,24 @@ export function Footer() {
                 {link.label}
               </Link>
             ))}
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 border-t border-border/40 pt-6">
+            {SHOP_CATEGORY_LINKS.map((link) => (
+              <Link
+                key={link.slug}
+                to="/shop/$category"
+                params={{ category: link.slug }}
+                className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </Link>
+            ))}
             <a
               href={site.instagramUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-[10px] uppercase tracking-[0.36em] text-muted-foreground transition-colors hover:text-foreground"
+              className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground transition-colors hover:text-foreground"
             >
               INSTAGRAM
             </a>
@@ -65,13 +90,13 @@ export function Footer() {
               href={site.wa(`Hi ${site.brand},`)}
               target="_blank"
               rel="noreferrer"
-              className="text-[10px] uppercase tracking-[0.36em] text-muted-foreground transition-colors hover:text-foreground"
+              className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground transition-colors hover:text-foreground"
             >
               WHATSAPP
             </a>
             <a
               href={site.emailHref}
-              className="text-[10px] uppercase tracking-[0.36em] text-muted-foreground transition-colors hover:text-foreground"
+              className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground transition-colors hover:text-foreground"
             >
               EMAIL
             </a>
