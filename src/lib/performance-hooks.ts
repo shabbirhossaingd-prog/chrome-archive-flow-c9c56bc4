@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 const INTERACTION_EVENT = "zzerkoff:performance-interaction";
-const HOMEPAGE_MIN_DELAY_MS = 7500;
+const HOMEPAGE_MIN_DELAY_MS = 3200;
 let interactionSeen = false;
 let trackingInstalled = false;
 
