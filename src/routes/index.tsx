@@ -15,6 +15,7 @@ import { CategoryCard } from "@/components/site/CategoryCard";
 import { SmartImage } from "@/components/site/SmartImage";
 import { useCurrentCollection } from "@/lib/cms";
 import { useHomepageDeferredEnabled } from "@/lib/performance-hooks";
+import chromeBlob from "@/assets/chrome-blob.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -38,6 +39,13 @@ export const Route = createFileRoute("/")({
       {
         rel: "preload",
         href: "/images/zzerkoff-logo.webp",
+        as: "image",
+        type: "image/webp",
+        fetchPriority: "high",
+      },
+      {
+        rel: "preload",
+        href: chromeBlob,
         as: "image",
         type: "image/webp",
         fetchPriority: "high",
@@ -87,6 +95,8 @@ function Index() {
           className="home-hero-chrome-primary left-1/2 top-1/2 h-[52rem] w-[52rem] -translate-x-1/2 -translate-y-1/2"
           opacity={0.3}
           blur={30}
+          defer={false}
+          priority
         />
         <LiquidChrome className="home-hero-chrome-secondary -right-32 bottom-0 h-[30rem] w-[30rem]" opacity={0.12} flip />
         <div className="grain-overlay home-hero-grain" />
