@@ -14,7 +14,7 @@ const PRICE_RULES = {
   headphone: { min: 1299, max: 2999, label: "Headphone / Earphone" },
   belt: { min: 1299, max: 1799, label: "Belt" },
   earring: { min: 399, max: 799, label: "Earring" },
-  watch: { min: 6999, max: 15999, label: "Watch" },
+  watch: { min: 15999, max: 26999, label: "Watch" },
 } as const;
 
 type PriceType = keyof typeof PRICE_RULES;
@@ -57,14 +57,16 @@ const slugify = (value: string) =>
 
 function normalizeType(value: string): PriceType | "other" {
   const v = value.toLowerCase().replace(/[^a-z]+/g, " ").trim();
-  if (/watch|wristwatch|timepiece/.test(v)) return "watch";
+
+  // Keep earring ahead of ring: "earring" contains "ring", but it is not a finger ring.
+  if (/earring|ear ring|ear cuff|hoop earring|drop earring|stud earring/.test(v)) return "earring";
+  if (/watch|wristwatch|timepiece|dial|chrono|chronograph/.test(v)) return "watch";
   if (/wallet|pant chain|waist chain/.test(v)) return "wallet-chain";
-  if (/bracelet|wrist/.test(v)) return "bracelet";
-  if (/earring|ear ring|ear cuff/.test(v)) return "earring";
-  if (/glass|eyewear|sunglass|spectacle/.test(v)) return "glasses";
+  if (/bracelet|bangle|wrist bracelet/.test(v)) return "bracelet";
+  if (/glass|eyewear|sunglass|spectacle|shade/.test(v)) return "glasses";
   if (/headphone|headset|earphone|earbud/.test(v)) return "headphone";
   if (/belt/.test(v)) return "belt";
-  if (/ring/.test(v)) return "ring";
+  if (/finger ring|signet|band ring|ring/.test(v)) return "ring";
   if (/necklace|chain|pendant/.test(v)) return "chain";
   return "other";
 }
@@ -78,14 +80,14 @@ function matchCategory(
   if (exact) return exact.slug;
 
   const needles: Record<PriceType, string[]> = {
-    ring: ["ring"],
-    bracelet: ["bracelet"],
+    ring: ["ring", "finger ring"],
+    bracelet: ["bracelet", "bangle"],
     "wallet-chain": ["wallet chain", "pant chain", "waist chain"],
     glasses: ["glass", "eyewear", "sunglass"],
     chain: ["chain", "necklace"],
     headphone: ["headphone", "headset", "earphone", "earbud"],
     belt: ["belt"],
-    earring: ["earring", "ear ring"],
+    earring: ["earring", "ear ring", "ear cuff"],
     watch: ["watch", "watches", "timepiece"],
   };
   if (productType === "other") return "";
@@ -98,15 +100,56 @@ function matchCategory(
   );
 }
 
-function clampPrice(productType: PriceType | "other", value: unknown) {
+function hashSeed(value: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash >>> 0);
+}
+
+function priceOptionsFor(productType: PriceType) {
+  const rule = PRICE_RULES[productType];
+  const options: number[] = [];
+
+  if (productType === "watch") {
+    for (let price = rule.min; price <= rule.max; price += 1000) options.push(price);
+  } else if (rule.max < 1000) {
+    for (let price = rule.min; price <= rule.max; price += 50) options.push(price);
+  } else if (rule.max <= 1999) {
+    for (let price = rule.min; price <= rule.max; price += 100) options.push(price);
+  } else {
+    for (let price = rule.min; price <= rule.max; price += 200) options.push(price);
+  }
+
+  if (!options.includes(rule.max)) options.push(rule.max);
+  return Array.from(new Set(options.filter((price) => price >= rule.min && price <= rule.max))).sort((a, b) => a - b);
+}
+
+function choosePrice(productType: PriceType, seed: string) {
+  const options = priceOptionsFor(productType);
+  if (!options.length) return PRICE_RULES[productType].min;
+  return options[hashSeed(seed) % options.length]!;
+}
+
+function clampPrice(productType: PriceType | "other", value: unknown, seed: string) {
   if (productType === "other") return { price: 0, range: "Needs review" };
   const rule = PRICE_RULES[productType];
+  const options = priceOptionsFor(productType);
   const raw = Number(value);
-  const midpoint = Math.round((rule.min + rule.max) / 2);
+
+  // Do not let Gemini collapse many products into the same midpoint price.
+  // Use the uploaded image/name/type as a stable seed so each row gets a varied price inside the allowed range.
+  const generated = choosePrice(productType, seed);
   const price = Number.isFinite(raw)
-    ? Math.min(rule.max, Math.max(rule.min, Math.round(raw)))
-    : midpoint;
-  return { price, range: `৳${rule.min}–${rule.max}` };
+    ? Math.min(rule.max, Math.max(rule.min, generated))
+    : generated;
+
+  return {
+    price: options.includes(price) ? price : choosePrice(productType, `${seed}:${price}`),
+    range: `৳${rule.min}–${rule.max}`,
+  };
 }
 
 export const detectBulkProductFromImage = createServerFn({ method: "POST" })
@@ -142,6 +185,13 @@ Analyze the supplied product photo and create ONE editable ecommerce product dra
 Choose product_type from these concepts only when visually appropriate:
 ring, bracelet, wallet-chain, glasses, chain, headphone, belt, earring, watch, other.
 
+Critical category rules:
+- Ring means a single finger ring worn on a finger. If the object is for ears, never return ring.
+- Earring means an ear accessory, usually a pair/two pieces, hoop, stud, drop, ear cuff or hanging ear object.
+- If two matching small ear pieces are visible, prefer earring.
+- Watch means wristwatch/timepiece/dial object, not bracelet.
+- Chain / necklace is neck jewelry; wallet-chain is a pant/waist/wallet hanging chain.
+
 Existing website categories (return category_slug using one of these exact slugs when there is a clear match):
 ${allowedCategories || "No categories provided"}
 
@@ -149,13 +199,13 @@ Naming rules:
 - Create a distinctive short ZZERKOFF-style English product name based on visible shape/style.
 - Do not use Ring 1 / Product 1 / Item 1.
 - Do not claim brands or copyrighted collaborations.
+- Make names dark, chrome, gothic, Y2K and premium, but not cheesy.
 
 Facts rules:
 - Never invent metal composition, plating, waterproofing, measurements, origin, weight or medical/hypoallergenic claims.
 - material must be "Unknown / not confirmed" unless material is genuinely obvious from the image.
 - finish should describe visible finish/color only.
 - fit_gender should be UNISEX.
-- Copy should be premium, dark, Y2K/chrome/gothic but useful and not cheesy.
 
 Pricing rules (suggested_price MUST stay inside the matching type range):
 ring 299–499 BDT
@@ -166,7 +216,7 @@ chain 399–699 BDT
 headphone or earphone 1299–2999 BDT
 belt 1299–1799 BDT
 earring 399–799 BDT
-watch 6999–15999 BDT
+watch 15999–26999 BDT
 For other, return 0.
 
 Return product_type, category_slug, confidence (0 to 1), name, suggested_price, material, finish, short_description (max 155 chars), full_description (60-110 words), tags (6-10), details_content, material_content, care, seo_title (max 60 chars), seo_description (145-160 chars), image_alt_text (max 125 chars). Filename hint only: ${data.file_name || "none"}.`;
@@ -190,7 +240,7 @@ Return product_type, category_slug, confidence (0 to 1), name, suggested_price, 
             },
           ],
           generationConfig: {
-            temperature: 0.35,
+            temperature: 0.45,
             responseMimeType: "application/json",
             responseSchema: {
               type: "object",
@@ -257,11 +307,21 @@ Return product_type, category_slug, confidence (0 to 1), name, suggested_price, 
     if (!raw) throw new Error("AI returned an empty product analysis.");
 
     const parsed = JSON.parse(raw);
-    const productType = normalizeType(clean(parsed.product_type, 60));
+    const typeSource = [
+      parsed.product_type,
+      parsed.category_slug,
+      parsed.name,
+      ...(Array.isArray(parsed.tags) ? parsed.tags : []),
+    ].join(" ");
+    const productType = normalizeType(clean(typeSource, 500));
     const category = matchCategory(clean(parsed.category_slug, 100), productType, data.categories);
     const confidence = Math.max(0, Math.min(1, Number(parsed.confidence || 0)));
-    const pricing = clampPrice(productType, parsed.suggested_price);
     const name = clean(parsed.name, 160) || `ZZERKOFF ${productType === "other" ? "Object" : PRICE_RULES[productType].label}`;
+    const pricing = clampPrice(
+      productType,
+      parsed.suggested_price,
+      `${data.image_ref}:${data.file_name}:${productType}:${name}`,
+    );
     const material = clean(parsed.material, 200) || "Unknown / not confirmed";
     const finish = clean(parsed.finish, 200) || "Visible finish — review";
     const tags = Array.isArray(parsed.tags)
@@ -344,13 +404,17 @@ export const createBulkProducts = createServerFn({ method: "POST" })
         if (data.publish && row.price <= 0) throw new Error("Price is required before publishing.");
         if (data.publish && !row.short_description.trim()) throw new Error("AI/content review is required before publishing.");
 
-        const quantity = row.stock_status === "SOLD OUT" ? 0 : Math.max(0, row.quantity_available);
+        const quantity = row.stock_status === "SOLD OUT" || row.stock_status === "PRE-ORDER"
+          ? 0
+          : Math.max(0, row.quantity_available);
         const status =
           row.stock_status === "PRE-ORDER"
             ? "PRE-ORDER"
-            : quantity <= 0
+            : row.stock_status === "SOLD OUT"
               ? "SOLD OUT"
-              : row.stock_status;
+              : quantity <= 0
+                ? "SOLD OUT"
+                : row.stock_status;
         const slug = await uniqueSlug(context.supabase, row.slug || row.name);
         const { data: code, error: codeError } = await context.supabase.rpc("next_product_code", {
           _category: row.category,
@@ -397,9 +461,18 @@ export const createBulkProducts = createServerFn({ method: "POST" })
             gallery_images: [],
             sort_order: 0,
           })
-          .select("id,product_code,name")
+          .select("id,product_code,name,stock_status")
           .single();
         if (error) throw error;
+
+        if (status === "PRE-ORDER" && inserted.stock_status !== "PRE-ORDER") {
+          const { error: preorderError } = await context.supabase
+            .from("products")
+            .update({ stock_status: "PRE-ORDER", quantity_available: quantity })
+            .eq("id", inserted.id);
+          if (preorderError) throw preorderError;
+        }
+
         created.push({ id: inserted.id, code: inserted.product_code, name: inserted.name });
       } catch (error) {
         failed.push({
