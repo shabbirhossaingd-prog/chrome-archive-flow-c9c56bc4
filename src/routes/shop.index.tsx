@@ -168,34 +168,34 @@ function ShopPage() {
         </div>
       </section>
 
-      <section className="relative px-5 py-16 sm:px-8 sm:py-24">
+      <section className="relative px-5 py-14 sm:px-8 sm:py-22">
         <div className="mx-auto max-w-7xl">
           {(json.show_filters ?? true) && (
             <>
-              <Reveal className="glass-panel rounded-[26px] p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/45 pb-4">
+              <Reveal className="glass-panel rounded-[22px] p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/45 pb-3">
                   <div>
-                    <span className="text-[8px] uppercase tracking-[0.38em] text-muted-foreground">ALL CATEGORIES</span>
-                    <p className="mt-1 text-[9px] uppercase tracking-[0.24em] text-muted-foreground/80">
+                    <span className="text-[7px] uppercase tracking-[0.34em] text-muted-foreground sm:text-[8px]">ALL CATEGORIES</span>
+                    <p className="mt-1 text-[8px] uppercase tracking-[0.2em] text-muted-foreground/75">
                       {activeFilter?.name || "ALL"} selected
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFiltersOpen((value) => !value)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[8px] uppercase tracking-[0.24em] transition-colors ${
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-[7px] uppercase tracking-[0.2em] transition-colors sm:text-[8px] ${
                       filtersOpen || hasAdvancedFilters
                         ? "border-chrome/60 bg-white/[0.05] text-foreground"
                         : "border-border/60 text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <SlidersHorizontal className="size-3.5" />
+                    <SlidersHorizontal className="size-3" />
                     Filters
                     {hasAdvancedFilters ? " · ON" : ""}
                   </button>
                 </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-2 min-[420px]:grid-cols-4 lg:grid-cols-4">
+                <div className="mt-3 grid grid-cols-3 gap-1.5 min-[420px]:grid-cols-4 lg:grid-cols-4 lg:gap-2">
                   {filters.map((filter) => {
                     const isActive = active === filter.slug;
                     return (
@@ -203,15 +203,15 @@ function ShopPage() {
                         key={filter.slug}
                         type="button"
                         onClick={() => setActive(filter.slug)}
-                        className={`relative min-h-12 rounded-2xl border px-2 py-3 text-center text-[8px] uppercase tracking-[0.2em] transition-colors duration-300 sm:px-3 sm:text-[9px] ${
+                        className={`relative min-h-8 rounded-xl border px-1.5 py-2 text-center text-[7px] uppercase tracking-[0.13em] transition-colors duration-300 sm:min-h-9 sm:px-2 sm:text-[8px] sm:tracking-[0.16em] ${
                           isActive
-                            ? "border-chrome/60 bg-white/[0.06] text-foreground"
+                            ? "border-chrome/60 bg-white/[0.055] text-foreground"
                             : "border-border/45 text-muted-foreground hover:border-chrome/35 hover:text-chrome"
                         }`}
                       >
                         {filter.name}
                         {isActive && (
-                          <span className="absolute inset-x-4 bottom-1 h-px rounded-full bg-chrome/80" />
+                          <span className="absolute inset-x-3 bottom-0.5 h-px rounded-full bg-chrome/80" />
                         )}
                       </button>
                     );
@@ -290,7 +290,7 @@ function ShopPage() {
             </>
           )}
 
-          <Reveal className="mt-10 flex flex-wrap items-end justify-between gap-3 border-b border-border/45 pb-4">
+          <Reveal className="mt-9 flex flex-wrap items-end justify-between gap-3 border-b border-border/45 pb-4">
             <div>
               <span className="text-[8px] uppercase tracking-[0.38em] text-muted-foreground">ALL PRODUCTS</span>
               <p className="mt-2 text-[10px] uppercase tracking-[0.22em] text-foreground">
