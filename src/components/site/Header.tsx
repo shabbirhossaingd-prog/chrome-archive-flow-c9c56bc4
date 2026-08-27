@@ -49,32 +49,31 @@ export function Header() {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const iconLink =
-    "relative grid size-11 place-items-center rounded-full text-muted-foreground transition-colors duration-500 hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-chrome";
+    "relative grid size-9 place-items-center rounded-full text-muted-foreground transition-colors duration-500 hover:text-foreground";
 
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-5">
         <div
           className={cn(
-            "glass-panel mx-auto flex max-w-7xl items-center gap-3 rounded-3xl px-4 py-2 transition-all duration-700 sm:px-6 sm:py-3",
+            "glass-panel mx-auto flex max-w-7xl items-center gap-3 rounded-3xl px-4 py-3 transition-all duration-700 sm:px-6",
             scrolled ? "bg-black/60" : "bg-black/25",
           )}
         >
           <Link
             to="/"
-            aria-label="ZZERKOFF home"
-            className="inline-flex min-h-11 items-center font-display text-[13px] tracking-[0.32em] text-foreground sm:text-sm"
+            className="font-display text-[13px] tracking-[0.32em] text-foreground sm:text-sm"
           >
             ZZERKOFF
           </Link>
 
-          <nav className="mx-auto hidden items-center gap-6 xl:flex" aria-label="Primary navigation">
+          <nav className="mx-auto hidden items-center gap-6 xl:flex">
             {NAV.map((item) => (
               <Link
                 key={item.label}
                 to={item.to}
                 activeProps={{ className: "text-foreground" }}
-                className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground transition-colors duration-500 hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome"
+                className="text-[9px] uppercase tracking-[0.32em] text-muted-foreground transition-colors duration-500 hover:text-foreground"
               >
                 {item.label}
               </Link>
@@ -84,92 +83,76 @@ export function Header() {
           <div className="ml-auto flex items-center gap-0.5 xl:ml-0">
             <button
               type="button"
-              aria-label="Open product search"
-              aria-haspopup="dialog"
-              aria-expanded={searchOpen}
-              aria-controls="site-search-dialog"
+              aria-label="Search"
               onClick={() => setSearchOpen(true)}
               className={iconLink}
             >
-              <Search className="size-4" aria-hidden="true" />
+              <Search className="size-4" />
             </button>
 
-            <Link to="/wishlist" aria-label={`Wishlist${wishlist.length ? `, ${wishlist.length} saved` : ""}`} className={iconLink}>
-              <Heart className="size-4" aria-hidden="true" />
+            <Link to="/wishlist" aria-label="Wishlist" className={iconLink}>
+              <Heart className="size-4" />
               {wishlist.length > 0 && (
-                <span className="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full border border-border/60 bg-black px-1 text-[7px] text-foreground" aria-hidden="true">
+                <span className="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full border border-border/60 bg-black px-1 text-[7px] text-foreground">
                   {wishlist.length}
                 </span>
               )}
             </Link>
 
-            <Link to="/cart" aria-label={`Cart${cartCount ? `, ${cartCount} item${cartCount === 1 ? "" : "s"}` : ""}`} className={iconLink}>
-              <ShoppingBag className="size-4" aria-hidden="true" />
+            <Link to="/cart" aria-label="Cart" className={iconLink}>
+              <ShoppingBag className="size-4" />
               {cartCount > 0 && (
-                <span className="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full border border-border/60 bg-black px-1 text-[7px] text-foreground" aria-hidden="true">
+                <span className="absolute right-0 top-0 grid min-w-4 place-items-center rounded-full border border-border/60 bg-black px-1 text-[7px] text-foreground">
                   {cartCount}
                 </span>
               )}
             </Link>
 
             <Link to="/account" aria-label="Account" className={iconLink}>
-              <UserRound className="size-4" aria-hidden="true" />
+              <UserRound className="size-4" />
             </Link>
 
             <a
               href={site.instagramUrl}
               target="_blank"
               rel="noreferrer"
-              aria-label="Open ZZERKOFF Instagram in a new tab"
+              aria-label="Instagram"
               className={`${iconLink} hidden sm:grid`}
             >
-              <Instagram className="size-4" aria-hidden="true" />
+              <Instagram className="size-4" />
             </a>
 
             <button
               type="button"
-              aria-label="Open menu"
-              aria-haspopup="dialog"
-              aria-expanded={menuOpen}
-              aria-controls="site-menu-dialog"
+              aria-label="Menu"
               onClick={() => setMenuOpen(true)}
               className={`${iconLink} xl:hidden`}
             >
-              <Menu className="size-4" aria-hidden="true" />
+              <Menu className="size-4" />
             </button>
           </div>
         </div>
       </header>
 
       {searchOpen && (
-        <div
-          id="site-search-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="site-search-title"
-          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-2xl"
-        >
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-2xl">
           <div className="grain-overlay" />
           <div className="mx-auto flex h-full max-w-3xl flex-col px-5 pt-28 sm:px-8">
             <div className="flex items-center justify-between">
-              <h2 id="site-search-title" className="text-[10px] uppercase tracking-[0.45em] text-muted-foreground">
+              <span className="text-[10px] uppercase tracking-[0.45em] text-muted-foreground">
                 SEARCH THE ARCHIVE
-              </h2>
+              </span>
               <button
                 type="button"
                 aria-label="Close search"
                 onClick={() => setSearchOpen(false)}
-                className="grid size-11 place-items-center rounded-full border border-border/60 text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-chrome"
+                className="grid size-10 place-items-center rounded-full border border-border/60 text-muted-foreground hover:text-foreground"
               >
-                <X className="size-4" aria-hidden="true" />
+                <X className="size-4" />
               </button>
             </div>
 
-            <label className="sr-only" htmlFor="site-search-input">
-              Search products by name, code, or category
-            </label>
             <input
-              id="site-search-input"
               autoFocus
               value={q}
               onChange={(event) => setQ(event.target.value)}
@@ -179,7 +162,7 @@ export function Header() {
 
             <div className="mt-8 flex-1 overflow-y-auto pb-16">
               {q.trim() && results.length === 0 && (
-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground" role="status">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground">
                   No objects found
                 </p>
               )}
@@ -190,12 +173,11 @@ export function Header() {
                     <Link
                       to="/product/$slug"
                       params={{ slug: product.slug }}
-                      aria-label={`View ${product.name}`}
                       onClick={() => {
                         setSearchOpen(false);
                         setQ("");
                       }}
-                      className="glass-panel flex items-center gap-5 rounded-2xl p-3 transition-colors hover:border-chrome/60 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-chrome"
+                      className="glass-panel flex items-center gap-5 rounded-2xl p-3 transition-colors hover:border-chrome/60"
                     >
                       <SmartImage
                         src={product.primary_image}
@@ -225,36 +207,25 @@ export function Header() {
       )}
 
       {menuOpen && (
-        <div
-          id="site-menu-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="site-menu-title"
-          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-2xl xl:hidden"
-        >
+        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-2xl xl:hidden">
           <div className="grain-overlay" />
           <div className="flex h-full flex-col px-5 pt-24 sm:px-8">
-            <div className="flex items-center justify-between">
-              <h2 id="site-menu-title" className="text-[9px] uppercase tracking-[0.4em] text-muted-foreground">
-                Menu
-              </h2>
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setMenuOpen(false)}
-                className="grid size-11 place-items-center rounded-full border border-border/60 text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-chrome"
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            </div>
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+              className="ml-auto grid size-10 place-items-center rounded-full border border-border/60 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
 
-            <nav className="mt-10 flex flex-col gap-6 overflow-y-auto pb-8" aria-label="Mobile navigation">
+            <nav className="mt-10 flex flex-col gap-6 overflow-y-auto pb-8">
               {NAV.map((item) => (
                 <Link
                   key={item.label}
                   to={item.to}
                   onClick={() => setMenuOpen(false)}
-                  className="font-display text-lg tracking-[0.25em] text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome sm:text-xl"
+                  className="font-display text-lg tracking-[0.25em] text-foreground sm:text-xl"
                 >
                   {item.label}
                 </Link>
@@ -262,21 +233,21 @@ export function Header() {
               <Link
                 to="/bundles"
                 onClick={() => setMenuOpen(false)}
-                className="font-display text-lg tracking-[0.25em] text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome sm:text-xl"
+                className="font-display text-lg tracking-[0.25em] text-foreground sm:text-xl"
               >
                 BUNDLES
               </Link>
               <Link
                 to="/wishlist"
                 onClick={() => setMenuOpen(false)}
-                className="font-display text-lg tracking-[0.25em] text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome sm:text-xl"
+                className="font-display text-lg tracking-[0.25em] text-foreground sm:text-xl"
               >
                 WISHLIST
               </Link>
               <Link
                 to="/account"
                 onClick={() => setMenuOpen(false)}
-                className="font-display text-lg tracking-[0.25em] text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome sm:text-xl"
+                className="font-display text-lg tracking-[0.25em] text-foreground sm:text-xl"
               >
                 ACCOUNT
               </Link>
@@ -286,8 +257,7 @@ export function Header() {
               href={site.instagramUrl}
               target="_blank"
               rel="noreferrer"
-              aria-label="Open ZZERKOFF Instagram in a new tab"
-              className="mt-auto pb-12 text-[10px] uppercase tracking-[0.45em] text-muted-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome"
+              className="mt-auto pb-12 text-[10px] uppercase tracking-[0.45em] text-muted-foreground"
             >
               INSTAGRAM {site.instagramHandle}
             </a>
