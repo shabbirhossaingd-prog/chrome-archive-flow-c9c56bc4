@@ -24,7 +24,8 @@ export function ProductCard({
       <Link
         to="/product/$slug"
         params={{ slug: product.slug }}
-        className="block"
+        aria-label={`View ${product.name}, ${formatPrice(product.price)}, ${stockLabel}`}
+        className="block focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome"
       >
         <div className="relative overflow-hidden bg-black">
           <SmartImage
@@ -39,7 +40,7 @@ export function ProductCard({
           <div className="grain-overlay" />
 
           {badges.length > 0 && (
-            <div className="absolute left-4 top-4 z-10 flex max-w-[70%] flex-wrap gap-2">
+            <div className="absolute left-4 top-4 z-10 flex max-w-[70%] flex-wrap gap-2" aria-label="Product badges">
               {badges.map((badge) => (
                 <span
                   key={badge}
@@ -82,7 +83,7 @@ export function ProductCard({
             </div>
           </div>
 
-          <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground transition-all duration-700 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-foreground" />
+          <ArrowUpRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted-foreground transition-all duration-700 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-foreground" />
         </div>
       </Link>
     </article>
