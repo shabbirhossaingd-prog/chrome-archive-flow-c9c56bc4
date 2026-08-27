@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const PREFIX = "storage:";
+const SIGNED_IMAGE_TTL_SECONDS = 60 * 60 * 24 * 7;
+const SIGNED_IMAGE_STALE_MS = 1000 * 60 * 60 * 24 * 6;
 export const toStorageRef = (path: string) => `${PREFIX}${path}`;
 
 type SmartImageProps = {
@@ -34,12 +36,12 @@ export function SmartImage({
   const { data: signed } = useQuery({
     queryKey: ["storage-image", path],
     enabled: !!path,
-    staleTime: 1000 * 60 * 55,
-    gcTime: 1000 * 60 * 60,
+    staleTime: SIGNED_IMAGE_STALE_MS,
+    gcTime: SIGNED_IMAGE_STALE_MS + 1000 * 60 * 60,
     queryFn: async () => {
       const { data } = await supabase.storage
         .from("product-images")
-        .createSignedUrl(path!, 60 * 60);
+        .createSignedUrl(path!, SIGNED_IMAGE_TTL_SECONDS);
       return data?.signedUrl ?? "";
     },
   });
