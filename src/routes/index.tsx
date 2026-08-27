@@ -54,7 +54,7 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 function Index() {
-  const catalogReady = useHomepageDeferredEnabled(true, 2200);
+  const catalogReady = useHomepageDeferredEnabled(true, 5200);
 
   const { data: products = [], isLoading } = useProducts(catalogReady);
   const { data: categories = [] } = useCategories(catalogReady);
@@ -155,7 +155,6 @@ function Index() {
               products={newDrop}
               loading={!catalogReady || isLoading}
               empty="New objects arriving soon."
-              priorityCount={2}
             />
           </div>
         </div>
