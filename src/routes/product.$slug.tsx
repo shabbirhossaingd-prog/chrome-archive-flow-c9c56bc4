@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/accordion";
 import {
   formatPrice,
+  isPreorder,
   isSoldOut,
   productImages,
   useProducts,
@@ -125,7 +126,7 @@ function ProductDetail({
   const finishes = product.finish ?? [];
   const colors = (productAny.colors ?? []) as string[];
   const colorStock = (productAny.color_stock ?? {}) as Record<string, number>;
-  const preorder = product.stock_status === "PRE-ORDER";
+  const preorder = isPreorder(product);
 
   const firstAvailableColor =
     colors.find((value) => preorder || Number(colorStock[value] ?? 0) > 0) ??
