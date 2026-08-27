@@ -12,6 +12,8 @@ type Props = {
   blur?: number;
   /** Load the decorative bitmap after the first paint. */
   defer?: boolean;
+  /** Use only for the first hero chrome layer when Lighthouse treats it as LCP. */
+  priority?: boolean;
 };
 
 /** Reusable decorative liquid chrome fragment. Purely presentational. */
@@ -21,14 +23,15 @@ export function LiquidChrome({
   flip = false,
   blur = 22,
   defer = true,
+  priority = false,
 }: Props) {
-  const [ready, setReady] = useState(!defer);
+  const [ready, setReady] = useState(priority || !defer);
 
   useEffect(() => {
-    if (!defer) return;
+    if (priority || !defer) return;
     const timer = window.setTimeout(() => setReady(true), 900);
     return () => window.clearTimeout(timer);
-  }, [defer]);
+  }, [defer, priority]);
 
   return (
     <div
@@ -49,9 +52,9 @@ export function LiquidChrome({
         <img
           src={chromeBlob}
           alt=""
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
           decoding="async"
-          fetchPriority="low"
+          fetchPriority={priority ? "high" : "low"}
           className="liquid-chrome-image absolute inset-0 h-full w-full object-cover animate-drift"
           style={
             {
