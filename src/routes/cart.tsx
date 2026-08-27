@@ -43,13 +43,13 @@ function CartPage() {
 
           {items.length === 0 ? (
             <div className="glass-panel mt-12 rounded-[28px] p-10 text-center">
-              <ShoppingBag className="mx-auto size-6 text-muted-foreground" />
+              <ShoppingBag aria-hidden="true" className="mx-auto size-6 text-muted-foreground" />
               <p className="mt-5 text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
                 Your cart is empty
               </p>
               <Link
                 to="/shop"
-                className="mt-6 inline-flex rounded-full border border-chrome/50 px-7 py-4 text-[9px] uppercase tracking-[0.34em] text-foreground"
+                className="mt-6 inline-flex rounded-full border border-chrome/50 px-7 py-4 text-[9px] uppercase tracking-[0.34em] text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome"
               >
                 Shop objects
               </Link>
@@ -60,6 +60,7 @@ function CartPage() {
                 {items.map((item) => (
                   <article
                     key={item.key}
+                    aria-label={`${item.name}, quantity ${item.quantity}, ${site.price(item.price)} each`}
                     className="glass-panel flex gap-4 rounded-[24px] p-4"
                   >
                     <SmartImage
@@ -89,32 +90,35 @@ function CartPage() {
                       <div className="mt-4 flex items-center gap-2">
                         <button
                           type="button"
+                          aria-label={`Decrease quantity for ${item.name}`}
                           onClick={() =>
                             updateCartQuantity(item.key, item.quantity - 1)
                           }
-                          className="grid size-8 place-items-center rounded-full border border-border/60 text-muted-foreground"
+                          className="grid size-10 place-items-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-chrome"
                         >
-                          <Minus className="size-3" />
+                          <Minus aria-hidden="true" className="size-3" />
                         </button>
-                        <span className="min-w-8 text-center text-[10px] text-foreground">
+                        <span className="min-w-8 text-center text-[10px] text-foreground" aria-label={`Quantity ${item.quantity}`}>
                           {item.quantity}
                         </span>
                         <button
                           type="button"
+                          aria-label={`Increase quantity for ${item.name}`}
                           onClick={() =>
                             updateCartQuantity(item.key, item.quantity + 1)
                           }
-                          className="grid size-8 place-items-center rounded-full border border-border/60 text-muted-foreground"
+                          className="grid size-10 place-items-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-chrome"
                         >
-                          <Plus className="size-3" />
+                          <Plus aria-hidden="true" className="size-3" />
                         </button>
 
                         <button
                           type="button"
+                          aria-label={`Remove ${item.name} from cart`}
                           onClick={() => removeCartItem(item.key)}
-                          className="ml-auto inline-flex items-center gap-2 text-[8px] uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground"
+                          className="ml-auto inline-flex min-h-10 items-center gap-2 text-[8px] uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-chrome"
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 aria-hidden="true" className="size-3.5" />
                           Remove
                         </button>
                       </div>
@@ -123,7 +127,7 @@ function CartPage() {
                 ))}
               </div>
 
-              <aside className="glass-panel h-fit rounded-[26px] p-5 lg:sticky lg:top-32">
+              <aside className="glass-panel h-fit rounded-[26px] p-5 lg:sticky lg:top-32" aria-label="Order summary">
                 <span className="text-[8px] uppercase tracking-[0.34em] text-muted-foreground">
                   Order summary
                 </span>
@@ -143,12 +147,14 @@ function CartPage() {
                   <div className="mt-2 flex gap-2">
                     <input
                       disabled
+                      aria-label="Promo code, future cart checkout"
                       placeholder="FUTURE CART CHECKOUT"
                       className="min-w-0 flex-1 rounded-2xl border border-border/60 bg-white/[0.02] px-4 py-3 text-[9px] tracking-[0.12em] text-muted-foreground"
                     />
                     <button
                       type="button"
                       disabled
+                      aria-label="Apply promo code, coming later"
                       className="rounded-2xl border border-border/50 px-4 text-[8px] uppercase tracking-[0.22em] text-muted-foreground opacity-60"
                     >
                       Apply
@@ -159,6 +165,7 @@ function CartPage() {
                 <button
                   type="button"
                   disabled
+                  aria-label="Checkout coming later"
                   className="mt-6 w-full rounded-full border border-chrome/40 bg-white/[0.03] px-6 py-5 text-[9px] uppercase tracking-[0.32em] text-muted-foreground opacity-70"
                 >
                   Checkout — coming later
