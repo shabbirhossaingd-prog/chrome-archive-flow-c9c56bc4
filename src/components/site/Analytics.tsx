@@ -75,7 +75,7 @@ function snapshotCart() {
 
 export function Analytics() {
   const location = useLocation();
-  const analyticsReady = useHomepageDeferredEnabled(true, 2600);
+  const analyticsReady = useHomepageDeferredEnabled(true, 9000);
 
   useEffect(() => {
     if (!analyticsReady) return;
