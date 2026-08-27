@@ -36,6 +36,9 @@ const buildSelect = () => supabase.from("products").select("*");
 const buildPublicSelect = () =>
   supabase.from("products").select(PUBLIC_PRODUCT_FIELDS);
 
+/** Temporary store mode: every customer-facing object is available as PRE-ORDER. */
+export const FORCE_ALL_PRODUCTS_PREORDER = true;
+
 /** Published, non-archived objects — lightweight payload for public cards/lists. */
 export const productsQuery = queryOptions({
   queryKey: ["products", "public"],
@@ -152,7 +155,8 @@ export function useAllCategories() {
   return useQuery(allCategoriesQuery);
 }
 
-export const isPreorder = (p: Product) => p.stock_status === "PRE-ORDER";
+export const isPreorder = (p: Product) =>
+  FORCE_ALL_PRODUCTS_PREORDER || p.stock_status === "PRE-ORDER";
 
 export const isSoldOut = (p: Product) =>
   !isPreorder(p) &&
