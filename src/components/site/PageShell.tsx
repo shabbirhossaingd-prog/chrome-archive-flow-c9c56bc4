@@ -5,8 +5,14 @@ import { Footer } from "./Footer";
 export function PageShell({ children }: { children: ReactNode }) {
   return (
     <div className="page-atmosphere relative min-h-screen overflow-x-clip">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[120] focus:rounded-full focus:border focus:border-chrome/60 focus:bg-black focus:px-5 focus:py-3 focus:text-[9px] focus:uppercase focus:tracking-[0.3em] focus:text-foreground"
+      >
+        Skip to content
+      </a>
       <Header />
-      <main>{children}</main>
+      <main id="main-content" tabIndex={-1}>{children}</main>
       <Footer />
     </div>
   );
