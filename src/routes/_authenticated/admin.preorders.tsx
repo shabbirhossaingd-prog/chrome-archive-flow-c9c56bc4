@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/admin/preorders")({
   component: AdminPreorders,
 });
 
-const STATUSES = ["new", "confirmed", "processing", "shipped", "delivered", "cancelled"] as const;
+const STATUSES = ["pre_order", "new", "confirmed", "processing", "shipped", "delivered", "cancelled"] as const;
 type OrderStatus = (typeof STATUSES)[number];
 
 type Preorder = {
@@ -35,10 +35,15 @@ type Preorder = {
   created_at: string;
 };
 
+function displayStatus(status: string) {
+  return status.replace(/_/g, "-");
+}
+
 function isPreorderOrder(order: Preorder) {
   const source = String(order.source || "").toLowerCase();
+  const status = String(order.status || "").toLowerCase();
   const note = String(order.customer_note || "").toLowerCase();
-  return source.includes("preorder") || source.includes("pre-order") || note.includes("pre-order");
+  return source.includes("preorder") || source.includes("pre-order") || status === "pre_order" || note.includes("pre-order");
 }
 
 function AdminPreorders() {
@@ -73,6 +78,7 @@ function AdminPreorders() {
   });
 
   const orders = ordersQuery.data ?? [];
+  const preorderCount = orders.filter((order) => order.status === "pre_order").length;
   const newCount = orders.filter((order) => order.status === "new").length;
   const confirmedCount = orders.filter((order) => order.status === "confirmed").length;
   const liveCount = orders.filter((order) => !["delivered", "cancelled"].includes(order.status)).length;
@@ -88,7 +94,7 @@ function AdminPreorders() {
             PRE-ORDER
           </h1>
           <p className="mt-3 text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
-            {orders.length} total · {newCount} new · {liveCount} active
+            {orders.length} total · {preorderCount} pre-order · {newCount} new · {liveCount} active
           </p>
         </div>
 
@@ -110,9 +116,10 @@ function AdminPreorders() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         {[
-          ["NEW PRE-ORDER", newCount],
+          ["PRE-ORDER", preorderCount],
+          ["NEW", newCount],
           ["CONFIRMED", confirmedCount],
           ["ACTIVE", liveCount],
         ].map(([label, value]) => (
@@ -146,7 +153,7 @@ function AdminPreorders() {
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/50 pb-5">
                   <div>
                     <span className="rounded-full border border-chrome/50 bg-white/[0.04] px-3 py-1 text-[8px] uppercase tracking-[0.25em] text-chrome">
-                      PRE-ORDER
+                      {displayStatus(order.status)}
                     </span>
                     <h2 className="mt-4 font-display text-base tracking-[0.16em] text-foreground">
                       {order.order_number}
@@ -169,7 +176,7 @@ function AdminPreorders() {
                             : "border-border/50 text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {status}
+                        {displayStatus(status)}
                       </button>
                     ))}
                   </div>
