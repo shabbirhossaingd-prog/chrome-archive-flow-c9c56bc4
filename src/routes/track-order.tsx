@@ -6,6 +6,7 @@ import { LiquidChrome } from "@/components/site/LiquidChrome";
 import { Reveal } from "@/components/site/Reveal";
 import { supabase } from "@/integrations/supabase/client";
 import { useSite } from "@/lib/settings";
+import { FORCE_ALL_PRODUCTS_PREORDER } from "@/lib/products";
 import { getPublicSteadfastStatus } from "@/lib/steadfast.functions";
 
 export const Route = createFileRoute("/track-order")({
@@ -27,6 +28,7 @@ type RecentOrder = {
   orderNumber: string;
   phone: string;
   createdAt: string;
+  preorder?: boolean;
 };
 
 type TrackedOrder = {
@@ -44,6 +46,7 @@ type TrackedOrder = {
   subtotal_price: number | string | null;
   discount_amount: number | string;
   promo_code: string | null;
+  customer_note?: string | null;
   total_price: number | string;
   created_at: string;
   confirmed_at: string | null;
@@ -64,11 +67,18 @@ function displayStatus(status: string) {
   return status.replace(/_/g, "-");
 }
 
-function isPreorderTrackedOrder(order: TrackedOrder | null) {
+function isPreorderTrackedOrder(order: TrackedOrder | null, localPreorder: boolean) {
   if (!order) return false;
   const source = String(order.source || "").toLowerCase();
   const status = String(order.status || "").toLowerCase();
-  return source.includes("preorder") || source.includes("pre-order") || status === "pre_order";
+  const note = String(order.customer_note || "").toLowerCase();
+  return (
+    localPreorder ||
+    source.includes("preorder") ||
+    source.includes("pre-order") ||
+    status === "pre_order" ||
+    note.includes("pre-order")
+  );
 }
 
 function TrackOrderPage() {
@@ -76,6 +86,7 @@ function TrackOrderPage() {
   const [orderNumber, setOrderNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [order, setOrder] = useState<TrackedOrder | null>(null);
+  const [localPreorder, setLocalPreorder] = useState(FORCE_ALL_PRODUCTS_PREORDER);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
@@ -109,6 +120,14 @@ function TrackOrderPage() {
 
     if (orderOverride) setOrderNumber(nextOrderNumber);
     if (phoneOverride) setPhone(nextPhone);
+
+    const recentMatch = recentOrders.find(
+      (row) =>
+        row.orderNumber.toLowerCase() === nextOrderNumber.toLowerCase() &&
+        cleanPhone(row.phone).slice(-11) === cleanPhone(nextPhone).slice(-11),
+    );
+    const nextLocalPreorder = Boolean(recentMatch?.preorder) || FORCE_ALL_PRODUCTS_PREORDER;
+    setLocalPreorder(nextLocalPreorder);
 
     if (nextOrderNumber.length < 6 || cleanPhone(nextPhone).length < 7) {
       setError("Enter your order number and the same phone number used at checkout.");
@@ -159,12 +178,14 @@ function TrackOrderPage() {
         .join(" / ")
     : "";
 
-  const preorderOrder = isPreorderTrackedOrder(order);
+  const preorderOrder = isPreorderTrackedOrder(order, localPreorder);
+  const effectiveStatus =
+    preorderOrder && order?.status === "new" && localPreorder ? "pre_order" : order?.status || "";
   const statusFlow = preorderOrder ? PREORDER_STATUS_ORDER : NORMAL_STATUS_ORDER;
-  const currentIndex = order ? statusFlow.indexOf(order.status) : -1;
+  const currentIndex = order ? statusFlow.indexOf(effectiveStatus) : -1;
 
   const timeline = useMemo(() => {
-    if (!order) return [] as Array<[string, string | null]>;
+    if (!order) return [] as Array<[string, string]>;
     return [
       [preorderOrder ? "PRE-ORDER" : "PLACED", order.created_at],
       ["CONFIRMED", order.confirmed_at],
@@ -216,6 +237,7 @@ function TrackOrderPage() {
                         {new Date(recent.createdAt).toLocaleDateString("en-GB", {
                           dateStyle: "medium",
                         })}
+                        {recent.preorder ? " · PRE-ORDER" : ""}
                       </p>
                     </div>
                     <button
@@ -300,7 +322,7 @@ function TrackOrderPage() {
                 </div>
                 <div className="text-right">
                   <span className="inline-block rounded-xl border border-chrome/50 px-3 py-2 text-[8px] uppercase tracking-[0.25em] text-chrome">
-                    {displayStatus(order.status)}
+                    {displayStatus(effectiveStatus)}
                   </span>
                   {Number(order.discount_amount || 0) > 0 && order.subtotal_price != null && (
                     <p className="mt-4 text-[9px] tracking-[0.12em] text-muted-foreground line-through">
