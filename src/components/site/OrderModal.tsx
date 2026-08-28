@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { FORCE_ALL_PRODUCTS_PREORDER } from "@/lib/products";
 
 type OrderModalProps = {
   open: boolean;
@@ -35,7 +36,7 @@ type PromoResult = {
 const inputClass =
   "w-full rounded-2xl border border-border/70 bg-white/[0.02] px-4 py-4 text-xs tracking-[0.08em] text-foreground outline-none transition-colors placeholder:text-muted-foreground/55 focus:border-chrome/70";
 
-function rememberOrder(orderNumber: string, phone: string) {
+function rememberOrder(orderNumber: string, phone: string, preorder: boolean) {
   if (typeof window === "undefined") return;
   try {
     const key = "zzerkoff:recent-orders:v1";
@@ -43,9 +44,10 @@ function rememberOrder(orderNumber: string, phone: string) {
       orderNumber: string;
       phone: string;
       createdAt: string;
+      preorder?: boolean;
     }>;
     const next = [
-      { orderNumber, phone, createdAt: new Date().toISOString() },
+      { orderNumber, phone, preorder, createdAt: new Date().toISOString() },
       ...old.filter((row) => row.orderNumber !== orderNumber),
     ].slice(0, 8);
     window.localStorage.setItem(key, JSON.stringify(next));
@@ -84,7 +86,7 @@ export function OrderModal({
   const [placedTotal, setPlacedTotal] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const [preorder, setPreorder] = useState(false);
+  const [preorder, setPreorder] = useState(FORCE_ALL_PRODUCTS_PREORDER);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bkash" | "nagad">("cod");
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
   const [transactionId, setTransactionId] = useState("");
@@ -134,6 +136,7 @@ export function OrderModal({
     setTransactionId("");
     setPromo(null);
     setPromoInput("");
+    setPreorder(FORCE_ALL_PRODUCTS_PREORDER);
 
     (async () => {
       const [{ data: settingsData }, { data: productData }] = await Promise.all([
@@ -151,7 +154,10 @@ export function OrderModal({
 
       const settings = settingsData ?? null;
       setPaymentSettings(settings);
-      setPreorder(String(productData?.stock_status || "").toUpperCase() === "PRE-ORDER");
+      setPreorder(
+        FORCE_ALL_PRODUCTS_PREORDER ||
+          String(productData?.stock_status || "").toUpperCase() === "PRE-ORDER",
+      );
 
       if (settings?.cod_enabled !== false) {
         setPaymentMethod("cod");
@@ -297,6 +303,10 @@ export function OrderModal({
     setSubmitting(true);
     setError("");
 
+    const checkoutNote = [preorder ? "PRE-ORDER" : "", note.trim()]
+      .filter(Boolean)
+      .join("\n") || null;
+
     const { data, error: submitError } = await (supabase as any).rpc("create_commerce_order", {
       p_product_id: productId,
       p_customer_name: name.trim(),
@@ -309,7 +319,7 @@ export function OrderModal({
       p_map_url: mapUrl || null,
       p_latitude: latitude,
       p_longitude: longitude,
-      p_note: note.trim() || null,
+      p_note: checkoutNote,
       p_payment_method: paymentMethod,
       p_transaction_id: paymentMethod === "cod" ? null : transactionId.trim(),
       p_promo_code: promo?.valid ? promo.code : null,
@@ -327,13 +337,16 @@ export function OrderModal({
     const nextOrderNumber = result?.order_number ?? "ORDER RECEIVED";
     setOrderNumber(nextOrderNumber);
     setPlacedTotal(Number(result?.total_price ?? total));
-    rememberOrder(nextOrderNumber, normalizedPhone);
+    rememberOrder(nextOrderNumber, normalizedPhone, preorder);
   };
 
   const title = preorder ? "CONFIRM PRE-ORDER" : "PLACE ORDER";
   const receivedTitle = preorder ? "PRE-ORDER RECEIVED" : "ORDER RECEIVED";
   const submitLabel = preorder ? "Confirm pre-order" : "Confirm order";
   const submittingLabel = preorder ? "Placing pre-order…" : "Placing order…";
+  const trackHref = orderNumber
+    ? `/track-order?order=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phone)}`
+    : "/track-order";
 
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/85 px-4 py-6 backdrop-blur-md sm:py-10">
@@ -373,6 +386,11 @@ export function OrderModal({
                     <p className="mt-2 text-[8px] uppercase tracking-[0.25em] text-muted-foreground">
                       {variantText} · QTY {quantity} · {paymentMethod}
                     </p>
+                    {preorder && (
+                      <p className="mt-2 text-[8px] uppercase tracking-[0.22em] text-chrome">
+                        Pre-order confirmed
+                      </p>
+                    )}
                     {promo?.valid ? (
                       <p className="mt-2 text-[8px] uppercase tracking-[0.22em] text-chrome">
                         Promo {promo.code} applied
@@ -408,7 +426,7 @@ export function OrderModal({
                   </span>
                 </button>
                 <a
-                  href="/track-order"
+                  href={trackHref}
                   className="rounded-full border border-chrome/50 bg-white/[0.04] px-6 py-5 text-[9px] uppercase tracking-[0.32em] text-foreground transition-colors hover:bg-white/[0.08]"
                 >
                   Track order
