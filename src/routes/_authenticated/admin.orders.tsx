@@ -15,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/admin/orders")({
 });
 
 const STATUSES = [
+  "pre_order",
   "new",
   "confirmed",
   "processing",
@@ -66,6 +67,15 @@ type Order = {
   created_at: string;
   updated_at: string;
 };
+
+function displayStatus(status: string) {
+  return status.replace(/_/g, "-");
+}
+
+function isPreorderOrder(order: Order) {
+  const source = String(order.source || "").toLowerCase();
+  return order.status === "pre_order" || source.includes("preorder") || source.includes("pre-order");
+}
 
 function AdminOrders() {
   const site = useSite();
@@ -148,6 +158,8 @@ function AdminOrders() {
         toast.success("Test Mode: order confirmed. Nothing was sent to Steadfast.");
       } else if (result?.courierCreated) {
         toast.success("Order confirmed and sent to Steadfast.");
+      } else {
+        toast.success("Order updated.");
       }
     },
     onError: (error) => {
@@ -204,10 +216,7 @@ function AdminOrders() {
 
   const syncSteadfast = useMutation({
     mutationFn: async (id: string) => {
-      if (steadfastTestMode) {
-        return { testMode: true };
-      }
-
+      if (steadfastTestMode) return { testMode: true };
       const accessToken = await getAccessToken();
       return syncSteadfastShipment({
         data: { orderId: id, accessToken },
@@ -232,7 +241,6 @@ function AdminOrders() {
       if (order.status !== "cancelled") {
         throw new Error("Only cancelled orders can be deleted.");
       }
-
       if (
         order.steadfast_state === "connected" ||
         order.steadfast_consignment_id ||
@@ -248,7 +256,6 @@ function AdminOrders() {
         .delete()
         .eq("id", order.id)
         .eq("status", "cancelled");
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -261,6 +268,7 @@ function AdminOrders() {
   });
 
   const orders = ordersQuery.data ?? [];
+  const preOrderCount = orders.filter((o) => o.status === "pre_order" || isPreorderOrder(o)).length;
   const newCount = orders.filter((o) => o.status === "new").length;
   const confirmedCount = orders.filter((o) => o.status === "confirmed").length;
   const processingCount = orders.filter((o) => o.status === "processing").length;
@@ -280,6 +288,7 @@ function AdminOrders() {
         o.product_name,
         o.product_code,
         o.delivery_address,
+        o.source,
       ]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
@@ -297,7 +306,7 @@ function AdminOrders() {
             ORDERS
           </h1>
           <p className="mt-3 text-[9px] uppercase tracking-[0.3em] text-muted-foreground">
-            {orders.length} total · {newCount} new
+            {orders.length} total · {preOrderCount} pre-order · {newCount} new
           </p>
         </div>
 
@@ -322,8 +331,9 @@ function AdminOrders() {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
         {[
+          ["PRE-ORDER", preOrderCount],
           ["NEW", newCount],
           ["CONFIRMED", confirmedCount],
           ["PROCESSING", processingCount],
@@ -359,7 +369,7 @@ function AdminOrders() {
                     : "border-border/50 text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {status}
+                {status === "all" ? "ALL" : displayStatus(status)}
               </button>
             ))}
           </div>
@@ -373,7 +383,7 @@ function AdminOrders() {
       ) : ordersQuery.error ? (
         <div className="glass-panel rounded-[24px] p-6">
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Could not load orders. Make sure the order database SQL has been installed in Lovable Cloud.
+            Could not load orders. Make sure the latest order SQL migration is applied in Supabase.
           </p>
         </div>
       ) : visible.length === 0 ? (
@@ -393,7 +403,7 @@ function AdminOrders() {
               .filter(Boolean)
               .join(" / ");
             const timeline = [
-              ["PLACED", order.created_at],
+              [isPreorderOrder(order) ? "PRE-ORDER" : "PLACED", order.created_at],
               ["CONFIRMED", order.confirmed_at],
               ["PROCESSING", order.processing_at],
               ["SHIPPED", order.shipped_at],
@@ -432,7 +442,7 @@ function AdminOrders() {
                             : "border-border/50 text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {status}
+                        {displayStatus(status)}
                       </button>
                     ))}
                   </div>
@@ -598,7 +608,8 @@ function AdminOrders() {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {order.status !== "new" &&
+                      {order.status !== "pre_order" &&
+                        order.status !== "new" &&
                         order.status !== "cancelled" &&
                         order.status !== "delivered" &&
                         order.steadfast_state !== "connected" && order.steadfast_state !== "test" && (
