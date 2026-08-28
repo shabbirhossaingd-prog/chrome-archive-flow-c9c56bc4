@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Loader2, Search } from "lucide-react";
 import { PageShell } from "@/components/site/PageShell";
 import { LiquidChrome } from "@/components/site/LiquidChrome";
@@ -12,7 +12,10 @@ export const Route = createFileRoute("/track-order")({
   head: () => ({
     meta: [
       { title: "Track Order — ZZERKOFF" },
-      { name: "description", content: "Track a ZZERKOFF order using the order number and checkout phone number." },
+      {
+        name: "description",
+        content: "Track a ZZERKOFF order using the order number and checkout phone number.",
+      },
       { property: "og:title", content: "Track Order — ZZERKOFF" },
     ],
     links: [{ rel: "canonical", href: "https://zzerkoff.vercel.app/track-order" }],
@@ -28,6 +31,7 @@ type RecentOrder = {
 
 type TrackedOrder = {
   order_number: string;
+  source: string | null;
   status: string;
   payment_method: string;
   payment_status: string;
@@ -49,7 +53,23 @@ type TrackedOrder = {
   cancelled_at: string | null;
 };
 
-const STATUS_ORDER = ["new", "confirmed", "processing", "shipped", "delivered"];
+const NORMAL_STATUS_ORDER = ["new", "confirmed", "processing", "shipped", "delivered"];
+const PREORDER_STATUS_ORDER = ["pre_order", "new", "confirmed", "processing", "shipped", "delivered"];
+
+function cleanPhone(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function displayStatus(status: string) {
+  return status.replace(/_/g, "-");
+}
+
+function isPreorderTrackedOrder(order: TrackedOrder | null) {
+  if (!order) return false;
+  const source = String(order.source || "").toLowerCase();
+  const status = String(order.status || "").toLowerCase();
+  return source.includes("preorder") || source.includes("pre-order") || status === "pre_order";
+}
 
 function TrackOrderPage() {
   const site = useSite();
@@ -90,7 +110,7 @@ function TrackOrderPage() {
     if (orderOverride) setOrderNumber(nextOrderNumber);
     if (phoneOverride) setPhone(nextPhone);
 
-    if (nextOrderNumber.length < 6 || nextPhone.replace(/\D/g, "").length < 7) {
+    if (nextOrderNumber.length < 6 || cleanPhone(nextPhone).length < 7) {
       setError("Enter your order number and the same phone number used at checkout.");
       return;
     }
@@ -117,8 +137,9 @@ function TrackOrderPage() {
 
     try {
       const courier = await getPublicSteadfastStatus({
-        data: {          orderNumber: nextOrderNumber,
-phone: nextPhone,
+        data: {
+          orderNumber: nextOrderNumber,
+          phone: nextPhone,
         },
       });
 
@@ -138,18 +159,21 @@ phone: nextPhone,
         .join(" / ")
     : "";
 
-  const currentIndex = order ? STATUS_ORDER.indexOf(order.status) : -1;
+  const preorderOrder = isPreorderTrackedOrder(order);
+  const statusFlow = preorderOrder ? PREORDER_STATUS_ORDER : NORMAL_STATUS_ORDER;
+  const currentIndex = order ? statusFlow.indexOf(order.status) : -1;
 
-  const timeline = order
-    ? [
-        ["PLACED", order.created_at],
-        ["CONFIRMED", order.confirmed_at],
-        ["PROCESSING", order.processing_at],
-        ["SHIPPED", order.shipped_at],
-        ["DELIVERED", order.delivered_at],
-        ["CANCELLED", order.cancelled_at],
-      ].filter(([, time]) => Boolean(time))
-    : [];
+  const timeline = useMemo(() => {
+    if (!order) return [] as Array<[string, string | null]>;
+    return [
+      [preorderOrder ? "PRE-ORDER" : "PLACED", order.created_at],
+      ["CONFIRMED", order.confirmed_at],
+      ["PROCESSING", order.processing_at],
+      ["SHIPPED", order.shipped_at],
+      ["DELIVERED", order.delivered_at],
+      ["CANCELLED", order.cancelled_at],
+    ].filter(([, time]) => Boolean(time)) as Array<[string, string]>;
+  }, [order, preorderOrder]);
 
   return (
     <PageShell>
@@ -166,63 +190,65 @@ phone: nextPhone,
           <p className="mt-6 max-w-2xl font-editorial text-lg leading-relaxed text-muted-foreground">
             Enter the order ID received after checkout and the same phone number used for the order.
           </p>
-        </Reveal>        {recentOrders.length > 0 && (
-<Reveal delay={80}>
-  <section className="glass-panel mt-10 rounded-[28px] p-5 sm:p-7">
-    <span className="text-[8px] uppercase tracking-[0.35em] text-muted-foreground">
-      RECENT ORDERS ON THIS DEVICE
-    </span>
-    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-      Recent order IDs are saved only in this browser so you can recover and track them.
-    </p>
+        </Reveal>
 
-    <div className="mt-5 space-y-2">
-      {recentOrders.map((recent) => (
-        <article
-          key={recent.orderNumber}
-          className="flex flex-wrap items-center gap-3 rounded-[20px] border border-border/50 p-4"
-        >
-          <div className="min-w-0 flex-1">
-            <p className="text-[9px] uppercase tracking-[0.24em] text-foreground">
-              {recent.orderNumber}
-            </p>
-            <p className="mt-2 text-[8px] text-muted-foreground">
-              {new Date(recent.createdAt).toLocaleDateString("en-GB", {
-                dateStyle: "medium",
-              })}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(recent.orderNumber);
-                setCopiedOrder(recent.orderNumber);
-              } catch {
-                setCopiedOrder("");
-              }
-            }}
-            className="inline-flex items-center gap-2 rounded-xl border border-border/55 px-3 py-3 text-[8px] uppercase tracking-[0.2em] text-muted-foreground"
-          >
-            <Copy className="size-3" />
-            {copiedOrder === recent.orderNumber ? "Copied" : "Copy ID"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void track(recent.orderNumber, recent.phone)}
-            className="rounded-xl border border-chrome/45 px-4 py-3 text-[8px] uppercase tracking-[0.2em] text-foreground"
-          >
-            Track
-          </button>
-        </article>
-      ))}
-    </div>
-  </section>
-</Reveal>
+        {recentOrders.length > 0 && (
+          <Reveal delay={80}>
+            <section className="glass-panel mt-10 rounded-[28px] p-5 sm:p-7">
+              <span className="text-[8px] uppercase tracking-[0.35em] text-muted-foreground">
+                RECENT ORDERS ON THIS DEVICE
+              </span>
+              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                Recent order IDs are saved only in this browser so you can recover and track them.
+              </p>
+
+              <div className="mt-5 space-y-2">
+                {recentOrders.map((recent) => (
+                  <article
+                    key={recent.orderNumber}
+                    className="flex flex-wrap items-center gap-3 rounded-[20px] border border-border/50 p-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] uppercase tracking-[0.24em] text-foreground">
+                        {recent.orderNumber}
+                      </p>
+                      <p className="mt-2 text-[8px] text-muted-foreground">
+                        {new Date(recent.createdAt).toLocaleDateString("en-GB", {
+                          dateStyle: "medium",
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(recent.orderNumber);
+                          setCopiedOrder(recent.orderNumber);
+                        } catch {
+                          setCopiedOrder("");
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 rounded-xl border border-border/55 px-3 py-3 text-[8px] uppercase tracking-[0.2em] text-muted-foreground"
+                    >
+                      <Copy className="size-3" />
+                      {copiedOrder === recent.orderNumber ? "Copied" : "Copy ID"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void track(recent.orderNumber, recent.phone)}
+                      className="rounded-xl border border-chrome/45 px-4 py-3 text-[8px] uppercase tracking-[0.2em] text-foreground"
+                    >
+                      Track
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </Reveal>
         )}
 
         <Reveal delay={100}>
-<div className="glass-panel mt-10 rounded-[28px] p-5 sm:p-8">
+          <div className="glass-panel mt-10 rounded-[28px] p-5 sm:p-8">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-[8px] uppercase tracking-[0.35em] text-muted-foreground">Order ID</label>
@@ -245,8 +271,9 @@ phone: nextPhone,
               </div>
             </div>
             <button
-              type="button"              onClick={() => void track()}
-    disabled={loading}
+              type="button"
+              onClick={() => void track()}
+              disabled={loading}
               className="mt-5 flex w-full items-center justify-center gap-3 rounded-full border border-chrome/50 bg-white/[0.04] px-8 py-5 text-[10px] uppercase tracking-[0.42em] text-foreground transition-all hover:border-chrome hover:bg-white/[0.08] disabled:opacity-60"
             >
               {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
@@ -272,7 +299,9 @@ phone: nextPhone,
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="inline-block rounded-xl border border-chrome/50 px-3 py-2 text-[8px] uppercase tracking-[0.25em] text-chrome">{order.status}</span>
+                  <span className="inline-block rounded-xl border border-chrome/50 px-3 py-2 text-[8px] uppercase tracking-[0.25em] text-chrome">
+                    {displayStatus(order.status)}
+                  </span>
                   {Number(order.discount_amount || 0) > 0 && order.subtotal_price != null && (
                     <p className="mt-4 text-[9px] tracking-[0.12em] text-muted-foreground line-through">
                       {site.currencySymbol}{Number(order.subtotal_price).toLocaleString("en-US")}
@@ -290,15 +319,20 @@ phone: nextPhone,
               </div>
 
               {order.status !== "cancelled" && (
-                <div className="mt-6 grid grid-cols-5 gap-2">
-                  {STATUS_ORDER.map((status, index) => {
+                <div
+                  className="mt-6 grid gap-2"
+                  style={{ gridTemplateColumns: `repeat(${statusFlow.length}, minmax(0, 1fr))` }}
+                >
+                  {statusFlow.map((status, index) => {
                     const active = index <= currentIndex;
                     return (
                       <div key={status} className="min-w-0 text-center">
                         <div className={`mx-auto grid size-7 place-items-center rounded-full border ${active ? "border-chrome/70 bg-white/[0.07] text-foreground" : "border-border/50 text-muted-foreground"}`}>
                           {active ? <Check className="size-3" /> : <span className="text-[8px]">{index + 1}</span>}
                         </div>
-                        <span className="mt-2 block truncate text-[7px] uppercase tracking-[0.12em] text-muted-foreground sm:text-[8px]">{status}</span>
+                        <span className="mt-2 block truncate text-[7px] uppercase tracking-[0.12em] text-muted-foreground sm:text-[8px]">
+                          {displayStatus(status)}
+                        </span>
                       </div>
                     );
                   })}
