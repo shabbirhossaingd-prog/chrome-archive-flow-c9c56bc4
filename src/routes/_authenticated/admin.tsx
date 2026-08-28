@@ -20,7 +20,6 @@ const NAV_ITEMS = [
   { label: "DASHBOARD", to: "/admin" as const },
   { label: "AI STUDIO", to: "/admin/ai" as const },
   { label: "ORDERS", to: "/admin/orders" as const },
-  { label: "PRE-ORDER", to: "/admin/preorders" as const },
   { label: "OBJECTS", to: "/admin/products" as const },
   { label: "BULK IMPORT", to: "/admin/products/bulk" as const },
   { label: "CATEGORIES", to: "/admin/categories" as const },
